@@ -1,0 +1,68 @@
+{
+ "generated_at": "2026-11-13T12:19:14.729426+00:00",
+ "engine": "earthsignal-pipeline 2.0 (global)",
+ "datasets": [
+  {
+   "role": "primary analysis data",
+   "name": "NASA POWER Monthly Regional API (source-native MERRA-2 grid)",
+   "url": "https://power.larc.nasa.gov/api/temporal/monthly/regional",
+   "retrieved_utc": "2026-11-01T16:35:01.305067+00:00",
+   "period": [
+    1981,
+    2025
+   ],
+   "variables": [
+    "T2M",
+    "T2M_MAX",
+    "T2M_MIN",
+    "PRECTOTCORR",
+    "RH2M",
+    "WS10M",
+    "GWETTOP",
+    "EVLAND"
+   ],
+   "requests": 5184
+  },
+  {
+   "role": "observed cross-check (precipitation)",
+   "name": "GPCP V2.3 Combined Precipitation Dataset (Final)",
+   "url": "https://downloads.psl.noaa.gov/Datasets/gpcp/precip.mon.mean.nc",
+   "source": "NOAA PSL / NASA GES DISC"
+  }
+ ],
+ "methods": {
+  "alpha": 0.05,
+  "confidence_level": 0.95,
+  "min_years": 20,
+  "caution_years": 25,
+  "year_completeness": 0.8,
+  "season_completeness": 0.99,
+  "fdr_method": "bh",
+  "fdr_note": "Benjamini-Hochberg applied across all eligible grid cells within one testing family: one variable x one domain x one period x one aggregation. Spatial correlation means BH's independence condition is not strictly met; BY is available as a conservative alternative.",
+  "test": {
+   "primary": "mann-kendall (normal approximation with tie and continuity correction)",
+   "secondary": "OLS slope t-test",
+   "magnitude": "Sen's slope on decimal years",
+   "ci": "Mann-Kendall / Gilbert confidence interval for Sen's slope"
+  },
+  "labels": [
+   "detected-increase",
+   "detected-decrease",
+   "no-detected-trend",
+   "insufficient-data",
+   "interpretation-caution"
+  ]
+ },
+ "grid": {
+  "n_lat": 361,
+  "n_lon": 576,
+  "lat_step": 0.5,
+  "lon_step": 0.625,
+  "note": "MERRA-2 native resolution retained worldwide; no resampling."
+ },
+ "software": {
+  "python": "3.10.11",
+  "numpy": "2.2.6",
+  "scipy": "1.15.3"
+ }
+}

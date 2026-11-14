@@ -1,0 +1,23 @@
+{
+  "alpha": 0.05,
+  "confidence_level": 0.95,
+  "min_years": 20,
+  "caution_years": 25,
+  "year_completeness": 0.8,
+  "season_completeness": 0.99,
+  "fdr_method": "bh",
+  "fdr_note": "Benjamini-Hochberg applied across all eligible grid cells within one testing family: one variable x one domain x one period x one aggregation. Spatial correlation means BH's independence condition is not strictly met; BY is available as a conservative alternative.",
+  "test": {
+    "primary": "mann-kendall (normal approximation with tie and continuity correction)",
+    "secondary": "OLS slope t-test",
+    "magnitude": "Sen's slope on decimal years",
+    "ci": "Mann-Kendall / Gilbert confidence interval for Sen's slope"
+  },
+  "labels": [
+    "detected-increase",
+    "detected-decrease",
+    "no-detected-trend",
+    "insufficient-data",
+    "interpretation-caution"
+  ]
+}

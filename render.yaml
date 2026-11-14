@@ -1,0 +1,41 @@
+# Render Blueprint: backend (FastAPI copilot) + static frontend.
+# Both services are on the free plan. Env vars to set by hand: LLM_API_KEY_1, LLM_API_KEY_2, TELLUS_ALLOWED_ORIGINS (backend); VITE_COPILOT_API_URL (web).
+services:
+  - type: web
+    name: tellus-backend
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements-backend.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: LLM_API_KEY_1
+        sync: false          # secret: paste in the Render dashboard
+      - key: LLM_API_KEY_2
+        sync: false          # secret: paste in the Render dashboard (failover key)
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: LLM_MODEL
+        value: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+      - key: LLM_STRUCTURED_OUTPUTS
+        value: "false"
+      - key: LLM_TIMEOUT_SECONDS
+        value: "30"
+      - key: TELLUS_ALLOWED_ORIGINS
+        sync: false          # the static site URL, e.g. https://tellus-web.onrender.com
+
+  - type: web
+    name: tellus-web
+    runtime: static   # static sites are free on Render and take no plan field
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: VITE_COPILOT_API_URL
+        sync: false          # the backend URL, e.g. https://tellus-backend.onrender.com

@@ -1,0 +1,10 @@
+# Runtime dependencies of the FastAPI copilot service ONLY (used by Render and the
+# Dockerfile). The backend imports pipeline/stats.py and pipeline/anomaly.py, which
+# need numpy + scipy but not xarray/netCDF4. Use requirements.txt for the full
+# data pipeline and the test suite.
+numpy>=1.24
+scipy>=1.10
+fastapi>=0.115
+uvicorn>=0.30
+pydantic>=2.7
+python-dotenv>=1.0

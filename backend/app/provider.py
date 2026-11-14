@@ -1,0 +1,212 @@
+"""Small provider-neutral JSON client.
+
+The browser never sees the provider key. The request format is intentionally
+compatible with OpenAI-style APIs, while keeping the rest of the service
+independent from a vendor SDK.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import http.client
+import json
+import threading
+import time
+import urllib.error
+import urllib.request
+from typing import Any
+
+from .config import Settings
+
+# --- API-key failover --------------------------------------------------------
+# Status codes that say "this key (or the provider right now) cannot serve the
+# request" -> try the next key. 400/404/422 are the request's own fault and must
+# never burn through keys.
+FAILOVER_STATUSES = frozenset({401, 402, 403, 408, 429})
+COOLDOWN_STATUSES = frozenset({401, 402, 403, 429})
+KEY_COOLDOWN_SECONDS = 600.0
+
+_state_lock = threading.Lock()
+_cooldown_until: dict[str, float] = {}
+
+
+def _now() -> float:
+    return time.monotonic()
+
+
+def _fingerprint(key: str) -> str:
+    """Process-local identity for a key that never exposes the key itself."""
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+
+
+def reset_key_state() -> None:
+    with _state_lock:
+        _cooldown_until.clear()
+
+
+def _is_cooling(key: str) -> bool:
+    with _state_lock:
+        until = _cooldown_until.get(_fingerprint(key))
+        if until is None:
+            return False
+        if until <= _now():
+            _cooldown_until.pop(_fingerprint(key), None)
+            return False
+        return True
+
+
+def _start_cooldown(key: str) -> None:
+    with _state_lock:
+        _cooldown_until[_fingerprint(key)] = _now() + KEY_COOLDOWN_SECONDS
+
+
+def key_order(settings: Settings) -> list[int]:
+    """Zero-based key indexes in the order they should be tried: healthy keys in
+    configured order first, cooling-down keys last (still tried as a last resort)."""
+    healthy = [i for i, key in enumerate(settings.llm_api_keys) if not _is_cooling(key)]
+    cooling = [i for i, key in enumerate(settings.llm_api_keys) if _is_cooling(key)]
+    return healthy + cooling
+
+
+def key_status(settings: Settings) -> dict[str, int]:
+    """Counts and the preferred ordinal (1-based, 0 = none). Never key contents."""
+    order = key_order(settings)
+    return {
+        "keysConfigured": len(settings.llm_api_keys),
+        "activeKey": (order[0] + 1) if order else 0,
+    }
+
+
+def _is_failover_error(exc: Exception) -> bool:
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in FAILOVER_STATUSES or exc.code >= 500
+    # URLError, timeouts, resets, DNS failures, truncated reads.
+    return isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError,
+                            OSError, http.client.HTTPException))
+
+
+def _post_chat_completion(settings: Settings, payload: dict[str, Any]) -> dict[str, Any]:
+    """POST to /chat/completions with ordered key failover; returns parsed JSON."""
+    if not settings.llm_api_keys:
+        raise ProviderUnavailable("LLM provider is not configured.")
+    data = json.dumps(payload).encode("utf-8")
+    last_error: Exception | None = None
+    for index in key_order(settings):
+        key = settings.llm_api_keys[index]
+        request = urllib.request.Request(
+            f"{settings.llm_base_url}/chat/completions",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "User-Agent": "Tellus/1.0",
+                "X-Title": "Tellus",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=settings.request_timeout_seconds) as response:
+                return json.loads(response.read())
+        except json.JSONDecodeError as exc:
+            raise ProviderUnavailable("LLM provider returned a non-JSON response.") from exc
+        except Exception as exc:  # noqa: BLE001 - classified below
+            if isinstance(exc, urllib.error.HTTPError):
+                exc.close()
+            if not _is_failover_error(exc):
+                if isinstance(exc, urllib.error.HTTPError):
+                    raise ProviderUnavailable(
+                        f"LLM provider rejected the request (HTTP {exc.code}).") from exc
+                raise
+            if isinstance(exc, urllib.error.HTTPError) and exc.code in COOLDOWN_STATUSES:
+                _start_cooldown(key)
+            last_error = exc
+    raise ProviderUnavailable(
+        f"LLM provider request failed on all {len(settings.llm_api_keys)} configured key(s).",
+    ) from last_error
+
+
+class ProviderUnavailable(RuntimeError):
+    """Raised when no configured provider can answer the request."""
+
+
+def generate_chat(
+    settings: Settings,
+    *,
+    messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    if not settings.llm_api_keys:
+        raise ProviderUnavailable("LLM provider is not configured.")
+    payload: dict[str, Any] = {
+        "model": settings.llm_model,
+        "temperature": 0.1,
+        "max_tokens": 1400,
+        "messages": messages,
+    }
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = "auto"
+    try:
+        body = _post_chat_completion(settings, payload)
+        return body["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ProviderUnavailable("LLM provider returned an unexpected response.") from exc
+
+
+def generate_json(
+    settings: Settings,
+    *,
+    system: str,
+    user: str,
+    schema: dict[str, Any],
+) -> dict[str, Any]:
+    if not settings.llm_api_keys:
+        raise ProviderUnavailable("AI copilot is not configured. Set LLM_API_KEY_1 on the backend.")
+
+    payload = {
+        "model": settings.llm_model,
+        "temperature": 0.1,
+        "max_tokens": 1200,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    }
+    if settings.llm_structured_outputs:
+        payload["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {"name": "tellus_copilot", "strict": True, "schema": schema},
+        }
+    body = _post_chat_completion(settings, payload)
+
+    try:
+        content = body["choices"][0]["message"]["content"]
+        if isinstance(content, list):
+            content = "".join(
+                part.get("text", "") for part in content if isinstance(part, dict)
+            )
+        result = _parse_json_object(str(content))
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
+        raise ProviderUnavailable("LLM provider returned an invalid structured response.") from exc
+    if not isinstance(result, dict):
+        raise ProviderUnavailable("LLM provider returned a non-object response.")
+    return result
+
+
+def _parse_json_object(content: str) -> dict[str, Any]:
+    """Accept plain JSON or a fenced JSON object, never arbitrary prose."""
+    candidate = content.strip()
+    if candidate.startswith("```"):
+        candidate = candidate.strip("`").strip()
+        if candidate.startswith("json"):
+            candidate = candidate[4:].lstrip()
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        start, end = candidate.find("{"), candidate.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError("No JSON object in provider response.")
+        parsed = json.loads(candidate[start:end + 1])
+    if not isinstance(parsed, dict):
+        raise ValueError("Provider response is not a JSON object.")
+    return parsed

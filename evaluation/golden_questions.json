@@ -1,0 +1,42 @@
+[
+  {"question": "Is the Arctic warming?", "selection": {"variableId": "T2M", "regionId": "arctic", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Compare Arctic and tropical warming.", "selection": {"variableId": "T2M", "regionId": "arctic", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is monsoon rainfall changing in the Western Ghats?", "selection": {"variableId": "PRECTOTCORR", "regionId": "western-ghats", "season": "JJAS", "windowId": "full"}, "expected": "answer"},
+  {"question": "Why is the Arctic warming?", "selection": {"variableId": "T2M", "regionId": "arctic", "season": "annual", "windowId": "full"}, "expected": "abstain"},
+  {"question": "What will temperature be in 2050?", "selection": {"variableId": "T2M", "regionId": "whole-earth", "season": "annual", "windowId": "full"}, "expected": "abstain"},
+  {"question": "Explain the statistical method.", "selection": {"variableId": "T2M", "regionId": "arctic", "season": "annual", "windowId": "full"}, "expected": "answer"},
+
+  {"question": "Is the Sahara getting hotter?", "selection": {"variableId": "T2M", "regionId": "sahara", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "How fast is Greenland warming per decade?", "selection": {"variableId": "T2M", "regionId": "greenland", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is Antarctica cooling?", "selection": {"variableId": "T2M", "regionId": "antarctica", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Are nights warming faster than days in Europe?", "selection": {"variableId": "T2M_MIN", "regionId": "western-europe", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is the whole Earth warming?", "selection": {"variableId": "T2M", "regionId": "whole-earth", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is the Amazon getting drier?", "selection": {"variableId": "GWETTOP", "regionId": "amazon", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is rainfall increasing in the Sahel?", "selection": {"variableId": "PRECTOTCORR", "regionId": "sahel", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "How is winter temperature changing in Siberia?", "selection": {"variableId": "T2M", "regionId": "siberia", "season": "DJF", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is soil moisture changing over the US Great Plains?", "selection": {"variableId": "GWETTOP", "regionId": "us-great-plains", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is evaporation changing in the Australian outback?", "selection": {"variableId": "EVLAND", "regionId": "australian-outback", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "What does the trend map show for wind speed?", "selection": {"variableId": "WS10M", "regionId": "whole-earth", "season": "annual", "windowId": "full"}, "expected": "answer"},
+
+  {"question": "What caused the drought in the Sahel?", "selection": {"variableId": "PRECTOTCORR", "regionId": "sahel", "season": "annual", "windowId": "full"}, "expected": "abstain"},
+  {"question": "Predict rainfall for next year.", "selection": {"variableId": "PRECTOTCORR", "regionId": "sahel", "season": "annual", "windowId": "full"}, "expected": "abstain"},
+  {"question": "Will the monsoon fail in 2030?", "selection": {"variableId": "PRECTOTCORR", "regionId": "western-ghats", "season": "JJAS", "windowId": "full"}, "expected": "abstain"},
+  {"question": "What is the groundwater trend in India?", "selection": {"variableId": "GWETTOP", "regionId": "indo-gangetic-plain", "season": "annual", "windowId": "full"}, "expected": "abstain"},
+  {"question": "Is climate change caused by humans?", "selection": {"variableId": "T2M", "regionId": "whole-earth", "season": "annual", "windowId": "full"}, "expected": "abstain"},
+
+  {"question": "How does Tellus handle missing months?", "selection": {"variableId": "T2M", "regionId": "arctic", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "What is the difference between the model and observed precipitation?", "selection": {"variableId": "PRECTOTCORR", "regionId": "western-ghats", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Why does the map show amber cells?", "selection": {"variableId": "T2M", "regionId": "whole-earth", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "What does statistically significant mean here?", "selection": {"variableId": "T2M", "regionId": "arctic", "season": "annual", "windowId": "full"}, "expected": "answer"},
+
+  {"question": "Is satellite rainfall changing in the Bengal Delta?", "selection": {"variableId": "IMERG_PRECIP", "regionId": "bengal-delta", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is NO2 increasing over the Indo-Gangetic Plain?", "selection": {"variableId": "OMI_NO2", "regionId": "indo-gangetic-plain", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Does satellite rainfall agree with MERRA-2 rainfall over the Sahel?", "selection": {"variableId": "KNMI_CMORPH_PRECIP", "regionId": "sahel", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is the Arctic surface warming according to AIRS?", "selection": {"variableId": "AIRS_TSURF", "regionId": "arctic", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is soil moisture falling in the Amazon according to GLDAS?", "selection": {"variableId": "GLDAS_SOILM", "regionId": "amazon", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is chlorophyll changing in the Southern Ocean?", "selection": {"variableId": "NOBM_TOTAL_CHL", "regionId": "southern-ocean", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is sea surface temperature rising in the Nino 3.4 region?", "selection": {"variableId": "KNMI_OISSTV2_SST", "regionId": "nino34", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Is aerosol optical depth changing over the Indo-Gangetic Plain?", "selection": {"variableId": "OMI_AOD_500", "regionId": "indo-gangetic-plain", "season": "annual", "windowId": "full"}, "expected": "answer"},
+  {"question": "Why is NO2 increasing over the Indo-Gangetic Plain?", "selection": {"variableId": "OMI_NO2", "regionId": "indo-gangetic-plain", "season": "annual", "windowId": "full"}, "expected": "abstain"},
+  {"question": "What will satellite rainfall be in the Bengal Delta in 2050?", "selection": {"variableId": "IMERG_PRECIP", "regionId": "bengal-delta", "season": "annual", "windowId": "full"}, "expected": "abstain"}
+]

@@ -1,0 +1,31 @@
+# Data caches (re-fetchable via pipeline scripts)
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+.earthdata_token
+.netrc
+!**/.env.example
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Parity artifacts (generated)
+tests/parity/series.json
+tests/parity/parity_py.json
+tests/parity/parity_ts.json
+
+# Internal docs (kept local)
+docs/

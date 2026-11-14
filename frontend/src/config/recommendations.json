@@ -1,0 +1,324 @@
+{
+ "place_types": [
+  {
+   "id": "desert",
+   "label": "Desert or dryland"
+  },
+  {
+   "id": "rainforest",
+   "label": "Rainforest"
+  },
+  {
+   "id": "coast",
+   "label": "Coast or delta"
+  },
+  {
+   "id": "city",
+   "label": "City or urban area"
+  },
+  {
+   "id": "mountains",
+   "label": "Mountains or highlands"
+  },
+  {
+   "id": "ice",
+   "label": "Ice, snow or polar"
+  },
+  {
+   "id": "farmland",
+   "label": "Farmland or grassland"
+  },
+  {
+   "id": "ocean",
+   "label": "Open ocean"
+  }
+ ],
+ "concerns": [
+  {
+   "id": "hotter",
+   "label": "Is it getting hotter?"
+  },
+  {
+   "id": "wetter",
+   "label": "Is rainfall changing?"
+  },
+  {
+   "id": "drier",
+   "label": "Is it drying out?"
+  },
+  {
+   "id": "greener",
+   "label": "Is vegetation changing?"
+  },
+  {
+   "id": "air",
+   "label": "What about the air?"
+  },
+  {
+   "id": "extremes",
+   "label": "Are extremes changing?"
+  }
+ ],
+ "matrix": {
+  "hotter": {
+   "default": [
+    {
+     "variableId": "T2M",
+     "reason": "Average air temperature is the standard thermometer answer to 'is it warming?'"
+    },
+    {
+     "variableId": "T2M_MIN",
+     "reason": "Nighttime minimums often warm fastest — important for health"
+    },
+    {
+     "variableId": "AIRS_TSURF",
+     "reason": "A satellite thermometer (AIRS on NASA's Aqua): does it agree with the model?"
+    }
+   ],
+   "city": [
+    {
+     "variableId": "T2M_MAX",
+     "reason": "Cities feel daytime heat most; maxima track heat waves"
+    },
+    {
+     "variableId": "T2M",
+     "reason": "The standard average-temperature answer"
+    }
+   ],
+   "ice": [
+    {
+     "variableId": "T2M",
+     "reason": "Polar regions warm several times faster than the global mean — test it"
+    },
+    {
+     "variableId": "T2M_MAX",
+     "reason": "Even brief warm spells matter for ice"
+    }
+   ],
+   "mountains": [
+    {
+     "variableId": "T2M",
+     "reason": "High mountains are early-warning zones for warming"
+    },
+    {
+     "variableId": "T2M_MIN",
+     "reason": "Overnight lows control snow survival"
+    }
+   ],
+   "ocean": [
+    {
+     "variableId": "KNMI_OISSTV2_SST",
+     "reason": "Sea-surface temperature from satellites is the ocean's thermometer"
+    },
+    {
+     "variableId": "T2M",
+     "reason": "Average air temperature is the standard thermometer answer to 'is it warming?'"
+    },
+    {
+     "variableId": "T2M_MIN",
+     "reason": "Nighttime minimums often warm fastest — important for health"
+    },
+    {
+     "variableId": "AIRS_TSURF",
+     "reason": "A satellite thermometer (AIRS on NASA's Aqua): does it agree with the model?"
+    }
+   ],
+   "coast": [
+    {
+     "variableId": "T2M",
+     "reason": "Average air temperature is the standard thermometer answer to 'is it warming?'"
+    },
+    {
+     "variableId": "T2M_MIN",
+     "reason": "Nighttime minimums often warm fastest — important for health"
+    },
+    {
+     "variableId": "AIRS_TSURF",
+     "reason": "A satellite thermometer (AIRS on NASA's Aqua): does it agree with the model?"
+    },
+    {
+     "variableId": "KNMI_OISSTV2_SST",
+     "reason": "The sea next to the coast warms too; compare it with the land"
+    }
+   ]
+  },
+  "wetter": {
+   "default": [
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "Total precipitation is the direct measure of rain and snow"
+    },
+    {
+     "variableId": "RH2M",
+     "reason": "Humidity shows whether the air is carrying more moisture"
+    },
+    {
+     "variableId": "IMERG_PRECIP",
+     "reason": "Satellite rainfall from NASA's GPM mission: an independent check on the model"
+    }
+   ],
+   "desert": [
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "In drylands even small rainfall shifts matter enormously"
+    },
+    {
+     "variableId": "IMERG_PRECIP",
+     "reason": "Satellite rainfall catches storms that sparse gauges miss"
+    }
+   ],
+   "coast": [
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "Coastal rainfall feeds rivers and deltas"
+    },
+    {
+     "variableId": "EVLAND",
+     "reason": "Evaporation competes with rainfall in the water budget"
+    }
+   ],
+   "rainforest": [
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "Total precipitation is the direct measure of rain and snow"
+    },
+    {
+     "variableId": "RH2M",
+     "reason": "Humidity shows whether the air is carrying more moisture"
+    },
+    {
+     "variableId": "IMERG_PRECIP",
+     "reason": "Satellite rainfall from NASA's GPM mission: an independent check on the model"
+    }
+   ]
+  },
+  "drier": {
+   "default": [
+    {
+     "variableId": "GWETTOP",
+     "reason": "Surface soil wetness is the most direct 'how dry is the ground' measure"
+    },
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "Check whether rainfall actually changed"
+    },
+    {
+     "variableId": "EVLAND",
+     "reason": "More evaporation dries the surface even if rain is steady"
+    },
+    {
+     "variableId": "GLDAS_SOILM",
+     "reason": "A second NASA land model's soil moisture: do the two models agree?"
+    }
+   ],
+   "farmland": [
+    {
+     "variableId": "GWETTOP",
+     "reason": "Topsoil moisture is what crops feel"
+    },
+    {
+     "variableId": "EVLAND",
+     "reason": "Evaporative demand drives irrigation need"
+    }
+   ]
+  },
+  "greener": {
+   "default": [
+    {
+     "variableId": "KNMI_NOAACDR_NDVI",
+     "reason": "NDVI is the satellite measure of how green the land is; 40 years of it"
+    },
+    {
+     "variableId": "GWETTOP",
+     "reason": "Water in the soil is what vegetation drinks — wetness trends frame greening/browning"
+    },
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "Rainfall is the other driver of vegetation change"
+    }
+   ],
+   "farmland": [
+    {
+     "variableId": "KNMI_NOAACDR_NDVI",
+     "reason": "Crop and grass greenness seen from space"
+    },
+    {
+     "variableId": "GWETTOP",
+     "reason": "Soil wetness frames growing conditions"
+    }
+   ],
+   "ocean": [
+    {
+     "variableId": "NOBM_TOTAL_CHL",
+     "reason": "Ocean 'greenness': chlorophyll marks plankton, the base of the marine food web"
+    },
+    {
+     "variableId": "KNMI_NOAACDR_NDVI",
+     "reason": "NDVI is the satellite measure of how green the land is; 40 years of it"
+    },
+    {
+     "variableId": "GWETTOP",
+     "reason": "Water in the soil is what vegetation drinks — wetness trends frame greening/browning"
+    },
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "Rainfall is the other driver of vegetation change"
+    }
+   ]
+  },
+  "air": {
+   "default": [
+    {
+     "variableId": "OMI_NO2",
+     "reason": "Nitrogen dioxide from NASA's OMI satellite: traffic, industry and fires"
+    },
+    {
+     "variableId": "OMI_AOD_500",
+     "reason": "How hazy the air is with dust, smoke and pollution (OMI aerosol)"
+    },
+    {
+     "variableId": "RH2M",
+     "reason": "Humidity changes how heat feels and how storms behave"
+    },
+    {
+     "variableId": "WS10M",
+     "reason": "Wind shapes everything from dust to storm damage"
+    }
+   ],
+   "city": [
+    {
+     "variableId": "OMI_NO2",
+     "reason": "Nitrogen dioxide is the satellite signature of city traffic and industry"
+    },
+    {
+     "variableId": "T2M_MAX",
+     "reason": "Urban heat is an air-quality-adjacent health story"
+    },
+    {
+     "variableId": "WS10M",
+     "reason": "Wind affects pollutant dispersal over cities"
+    }
+   ]
+  },
+  "extremes": {
+   "default": [
+    {
+     "variableId": "T2M_MAX",
+     "reason": "Daytime maxima track how hot the hottest days get"
+    },
+    {
+     "variableId": "T2M_MIN",
+     "reason": "Nighttime minima track warm nights — the stealth extreme"
+    },
+    {
+     "variableId": "PRECTOTCORR",
+     "reason": "Wet-season totals frame flood and drought risk"
+    }
+   ]
+  }
+ },
+ "notes": {
+  "greener": "A dedicated satellite vegetation index (NDVI) is on the roadmap via NASA mission data; for now, frame vegetation questions through water availability.",
+  "air": "Satellite air-quality variables (NO2, aerosols) are on the roadmap via NASA mission data."
+ }
+}

@@ -1,0 +1,626 @@
+{
+ "generated_by": "pipeline/build_validation.py",
+ "references_verified_on": "2026-11-15",
+ "method": "Our values use pipeline/stats.py (Sen slope, persistence-adjusted Mann-Kendall interval) on the shipped data assets.",
+ "summary": {
+  "scored": 8,
+  "pass": 3,
+  "partial": 4,
+  "fail": 1,
+  "not_comparable": 1
+ },
+ "cases": [
+  {
+   "id": "global-warming-rate",
+   "title": "Global warming rate, 1981-2025",
+   "question": "Does our global-mean temperature trend match NASA, NOAA and the Met Office?",
+   "kind": "independent-data",
+   "region": "Whole Earth (area-weighted)",
+   "period_ours": "1981-2025",
+   "period_reference": "1981-2025",
+   "units": "°C per decade",
+   "decimals": 3,
+   "our": {
+    "label": "MERRA-2 2 m air temperature (Sen slope, 95% CI persistence-adjusted)",
+    "value": 0.166172,
+    "ci_low": 0.113684,
+    "ci_high": 0.226667
+   },
+   "reference": {
+    "label": "Range of GISTEMP v4, NOAAGlobalTemp and HadCRUT5 (same Sen method)",
+    "value": 0.206448,
+    "low": 0.2,
+    "high": 0.212896,
+    "items": {
+     "GISTEMP v4": 0.211111,
+     "NOAAGlobalTemp": 0.2,
+     "HadCRUT 5.0.2.0": 0.212896
+    }
+   },
+   "rule": "Pass if our trend lies inside the range spanned by the three reference indices; partial if outside it but same sign and within 25% of the nearest edge; fail otherwise.",
+   "status": "partial",
+   "explanation": "MERRA-2 shows clear warming in the same direction but its rate sits just outside the range of the three indices. Reference indices (Sen slope, deg C/decade): GISTEMP v4 0.211, NOAAGlobalTemp 0.200, HadCRUT 5.0.2.0 0.213. Not a like-for-like quantity: MERRA-2 T2M is air temperature over land and ocean from a reanalysis, while the indices blend land air and sea-surface temperature.",
+   "sources": [
+    {
+     "citation": "NASA POWER monthly regional API, source-native MERRA-2 grid (Gelaro et al. 2017, J. Climate 30, 5419-5454)",
+     "url": "https://power.larc.nasa.gov/docs/",
+     "quote": "T2M and PRECTOTCORR, 1981-2025, area-weighted regional means (presets.json)."
+    },
+    {
+     "citation": "NASA GISS, GISTEMP v4 global land-ocean temperature index (Lenssen et al. 2019, J. Geophys. Res. Atmos., doi:10.1029/2018JD029522)",
+     "url": "https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.csv",
+     "quote": "Annual (J-D) global means, 1981-2025, downloaded 2026-11-15."
+    },
+    {
+     "citation": "NOAA NCEI, NOAAGlobalTemp, Climate at a Glance: global land and ocean annual anomalies",
+     "url": "https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/globe/tavg/land_ocean/12/12/1981-2025/data.csv",
+     "quote": "Annual departures from the 1901-2000 average, 1981-2025, downloaded 2026-11-15."
+    },
+    {
+     "citation": "UK Met Office Hadley Centre / UEA CRU, HadCRUT 5.0.2.0 analysis summary series, global annual (Morice et al. 2021, J. Geophys. Res. Atmos., doi:10.1029/2019JD032361)",
+     "url": "https://www.metoffice.gov.uk/hadobs/hadcrut5/data/HadCRUT.5.0.2.0/analysis/diagnostics/HadCRUT.5.0.2.0.analysis.summary_series.global.annual.csv",
+     "quote": "Annual global anomaly, 1981-2025, downloaded 2026-11-15."
+    }
+   ]
+  },
+  {
+   "id": "arctic-amplification",
+   "title": "Arctic amplification",
+   "question": "Is the Arctic warming about four times as fast as the whole planet?",
+   "kind": "literature",
+   "region": "Arctic (north of 66.5 deg N) vs Whole Earth",
+   "period_ours": "1981-2021",
+   "period_reference": "1979-2021",
+   "units": "ratio (Arctic trend / global trend)",
+   "decimals": 2,
+   "our": {
+    "label": "MERRA-2 2 m temperature, ratio of OLS slopes (95% bootstrap interval)",
+    "value": 3.11598,
+    "ci_low": 2.48289,
+    "ci_high": 3.87857
+   },
+   "reference": {
+    "label": "Rantanen et al. 2022: 3.8 (individual datasets 3.7 to 4.1)",
+    "value": 3.8,
+    "low": 3.7,
+    "high": 4.1
+   },
+   "rule": "Pass if our ratio is inside the published range 3.7 to 4.1; partial if outside it but within 25% of the nearest edge; fail otherwise.",
+   "status": "partial",
+   "explanation": "Our ratio shows strong Arctic amplification but lies outside the published 3.7 to 4.1 range. Our Arctic trend is 0.46 and global trend 0.15 deg C/decade (published: 0.73 and 0.19 over 1979-2021). The interval is a bootstrap over years. Caveats: our record starts in 1981, not 1979, and a reanalysis differs from the observational datasets used in the paper.",
+   "sources": [
+    {
+     "citation": "Rantanen, M. et al. (2022). The Arctic has warmed nearly four times faster than the globe since 1979. Communications Earth & Environment 3, 168",
+     "url": "https://doi.org/10.1038/s43247-022-00498-3",
+     "quote": "\"... we arrive at AA43 ... of 3.8 for the latest 43-year period of 1979-2021. The individual AA43 values range from 3.7 in ERA5 to 4.1 in BEST\"; \"The Arctic is defined as the area north of 66.5N\"; multi-dataset trends \"0.73 C decade-1\" (Arctic) and \"0.19 C decade-1\" (globe). Read in the full text (open-access PDF, Zenodo record 8063478)."
+    },
+    {
+     "citation": "NASA POWER monthly regional API, source-native MERRA-2 grid (Gelaro et al. 2017, J. Climate 30, 5419-5454)",
+     "url": "https://power.larc.nasa.gov/docs/",
+     "quote": "T2M and PRECTOTCORR, 1981-2025, area-weighted regional means (presets.json)."
+    }
+   ]
+  },
+  {
+   "id": "de-bilt-century-warming",
+   "title": "De Bilt century warming vs KNMI",
+   "question": "Does the station record we ship show the century warming KNMI reports for De Bilt?",
+   "kind": "literature",
+   "region": "De Bilt station, Netherlands",
+   "period_ours": "1901-2020",
+   "period_reference": "1901-2020",
+   "units": "°C total rise over 1901-2020",
+   "decimals": 2,
+   "our": {
+    "label": "NCEI GSOM De Bilt annual mean temperature (Sen slope x 119 years, 95% CI persistence-adjusted)",
+    "value": 2.0166,
+    "ci_low": 1.54334,
+    "ci_high": 2.53605
+   },
+   "reference": {
+    "label": "KNMI: \"ruim 2 °C\" (read as 2.0 to 2.5)",
+    "value": 2.25,
+    "low": 2.0,
+    "high": 2.5
+   },
+   "rule": "Pass if our total rise is inside 2.0 to 2.5 deg C; partial if outside but within 15% of the nearest edge; fail otherwise.",
+   "status": "pass",
+   "explanation": "The NOAA station record for De Bilt gives the same century-scale warming that KNMI reports for the same station. Our trend is 0.169 deg C/decade over 120 valid years. KNMI states a total rise (\"ruim 2\" = a good 2 deg C) fitted by its own trend method; reading that as 2.0 to 2.5 deg C is our interpretation, and Sen's slope is not KNMI's method.",
+   "sources": [
+    {
+     "citation": "NOAA NCEI, Global Summary of the Month v1.0 (station De Bilt), via Climate Data Online",
+     "url": "https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-monthly",
+     "quote": "Station monthly mean temperature aggregated to calendar years in missions.json (NCEI_GSOM_TAVG)."
+    },
+    {
+     "citation": "KNMI (Royal Netherlands Meteorological Institute), Klimaatdashboard (climate dashboard) news item",
+     "url": "https://www.knmi.nl/over-het-knmi/nieuws/klimaatdashboard",
+     "quote": "\"De jaartemperatuur in De Bilt is tussen 1901 en 2020 met ruim 2 °C gestegen\" (the annual temperature in De Bilt rose by a good 2 °C between 1901 and 2020)."
+    }
+   ]
+  },
+  {
+   "id": "station-vs-reanalysis",
+   "title": "Station ground truth vs reanalysis",
+   "question": "Does the satellite-era model data agree with a thermometer on the ground?",
+   "kind": "independent-data",
+   "region": "Western Europe box (MERRA-2) vs De Bilt station",
+   "period_ours": "1981-2025",
+   "period_reference": "1981-2025",
+   "units": "°C per decade",
+   "decimals": 3,
+   "our": {
+    "label": "MERRA-2 T2M, Western Europe box (Sen slope, 95% CI persistence-adjusted)",
+    "value": 0.41437,
+    "ci_low": 0.272609,
+    "ci_high": 0.557857
+   },
+   "reference": {
+    "label": "De Bilt station, NCEI GSOM (Sen slope, 95% CI persistence-adjusted)",
+    "value": 0.373511,
+    "low": 0.225878,
+    "high": 0.537669
+   },
+   "rule": "Pass if the two 95% intervals overlap and the slopes differ by at most 30% of the station slope; partial if the intervals overlap but the slopes differ by more; fail if the intervals do not overlap.",
+   "status": "pass",
+   "explanation": "The reanalysis box average and the single station warm at nearly the same rate, and year-to-year changes agree. Detrended year-to-year correlation r = 0.90. The comparison is imperfect by design: one station (De Bilt) against a 20 x 35 degree box of 0.5 x 0.625 degree cells, which includes the Atlantic coast and mountains.",
+   "sources": [
+    {
+     "citation": "NASA POWER monthly regional API, source-native MERRA-2 grid (Gelaro et al. 2017, J. Climate 30, 5419-5454)",
+     "url": "https://power.larc.nasa.gov/docs/",
+     "quote": "T2M and PRECTOTCORR, 1981-2025, area-weighted regional means (presets.json)."
+    },
+    {
+     "citation": "NOAA NCEI, Global Summary of the Month v1.0 (station De Bilt), via Climate Data Online",
+     "url": "https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-monthly",
+     "quote": "Station monthly mean temperature aggregated to calendar years in missions.json (NCEI_GSOM_TAVG)."
+    }
+   ]
+  },
+  {
+   "id": "india-no2-2005-2015",
+   "title": "India NO2 rise, 2005-2015",
+   "question": "Did tropospheric NO2 over northern India rise by more than half in a decade?",
+   "kind": "literature",
+   "region": "Indo-Gangetic Plain",
+   "period_ours": "2005-2015",
+   "period_reference": "2005-2015",
+   "units": "% change over the decade",
+   "decimals": 0,
+   "our": {
+    "label": "OMI NO2 (Sen slope x 10 years / 2005 level, 95% CI persistence-adjusted)",
+    "value": 21.3897,
+    "ci_low": 4.25671,
+    "ci_high": 32.261
+   },
+   "reference": {
+    "label": "Krotkov et al. 2016: India NO2 \"more than 50 %\"",
+    "value": 50,
+    "low": 50,
+    "high": null
+   },
+   "rule": "Pass if our change is at least +50%; partial if it is between +25% and +50% (same sign, at least half the published size); fail otherwise.",
+   "status": "fail",
+   "explanation": "Our regional NO2 change does not show the published increase. Sen-line start value 1.66 x10^15 molec/cm2 in 2005; trend p (persistence-adjusted) = 0.016. Krotkov's abstract does not define its India region and its largest increases are at coal-power hotspots, so a whole-plain average is a diluted version of the same signal. Only 11 annual points are used, which is short.",
+   "sources": [
+    {
+     "citation": "Krotkov, N. A. et al. (2016). Aura OMI observations of regional SO2 and NO2 pollution changes from 2005 to 2015. Atmospheric Chemistry and Physics 16, 4605-4629",
+     "url": "https://doi.org/10.5194/acp-16-4605-2016",
+     "quote": "India's SO2 and NO2 levels are \"increasing by more than 100 and 50 %, respectively, from 2005 to 2015.\" (abstract; the abstract does not define the India region)."
+    },
+    {
+     "citation": "NASA GES DISC, OMI/Aura NO2 Cloud-Screened Total and Tropospheric Column Daily L3 0.25 deg (OMNO2d v003), via Giovanni area averages",
+     "url": "https://disc.gsfc.nasa.gov/datasets/OMNO2d_003/summary",
+     "quote": "Regional annual means in missions.json (OMI_NO2)."
+    }
+   ]
+  },
+  {
+   "id": "ocean-sst-warming",
+   "title": "Satellite-era ocean surface warming",
+   "question": "Does our sea-surface temperature trend fall in the range published for the satellite era?",
+   "kind": "literature",
+   "region": "Global ocean box mean (ours) vs 60 deg S to 60 deg N (published)",
+   "period_ours": "1982-2022",
+   "period_reference": "1982-2024",
+   "units": "°C per decade",
+   "decimals": 3,
+   "our": {
+    "label": "NOAA OISST v2 (via KNMI Climate Explorer), Sen slope, 95% CI persistence-adjusted",
+    "value": 0.103277,
+    "ci_low": 0.0679455,
+    "ci_high": 0.13592
+   },
+   "reference": {
+    "label": "Menemenlis et al. 2025: four SST datasets span 0.108 to 0.184",
+    "value": 0.146,
+    "low": 0.108,
+    "high": 0.184
+   },
+   "rule": "Pass if our trend is inside 0.108 to 0.184 deg C/decade; partial if outside but same sign and within 25% of the nearest edge; fail otherwise.",
+   "status": "partial",
+   "explanation": "Our SST warming is positive and close to, but outside, the published spread of SST datasets. The published range is itself wide because SST datasets disagree with each other (that is the paper's point), so passing means 'plausible', not 'exact'. Differences in coverage: ours is a whole-globe box mean of OISST v2 for 1982-2022, theirs is 60 deg S to 60 deg N for 1982-2024.",
+   "sources": [
+    {
+     "citation": "Menemenlis, S., Vecchi, G. A., Yang, W., Fueglistaler, S., Raghuraman, S. P. (2025). Consequential differences in satellite-era sea surface temperature trends across datasets. Nature Climate Change 15, 897-903",
+     "url": "https://doi.org/10.1038/s41558-025-02362-6",
+     "quote": "\"... trends in four widely used SST datasets show first-order differences, with 1982-2024 60° S to 60° N trends ranging from 0.108 to 0.184 °C per decade.\""
+    },
+    {
+     "citation": "NOAA OISST v2 (Reynolds et al. 2002, J. Climate 15, 1609-1625), box mean via KNMI Climate Explorer",
+     "url": "https://climexp.knmi.nl/",
+     "quote": "Field sstoi_v2, whole-globe average (missions.json, KNMI_OISSTV2_SST)."
+    }
+   ]
+  },
+  {
+   "id": "precip-merra2-vs-gpcp",
+   "title": "Precipitation: MERRA-2 vs GPCP, 1981-2024",
+   "question": "Does the reanalysis precipitation trend agree with the gauge-satellite observational product?",
+   "kind": "internal",
+   "region": "All 17 regions in the app",
+   "period_ours": "1981-2024",
+   "period_reference": "1981-2024",
+   "units": "% of regions that agree",
+   "decimals": 0,
+   "our": {
+    "label": "MERRA-2 vs GPCP: regions with same-sign, overlapping trends",
+    "value": 58.8235,
+    "ci_low": null,
+    "ci_high": null
+   },
+   "reference": {
+    "label": "Pass at 75% or more",
+    "value": 75,
+    "low": 75,
+    "high": null
+   },
+   "rule": "A region agrees if both datasets' Sen slopes have the same sign and their persistence-adjusted 95% intervals overlap. Pass if at least 75% of regions agree; partial if 50% to 75%; fail below 50%.",
+   "status": "partial",
+   "explanation": "MERRA-2 and GPCP agree in 10 of 17 regions; the rest differ in sign or have non-overlapping uncertainty. Median detrended year-to-year correlation across regions r = 0.54. Disagreeing regions: whole-earth, tropics, australian-outback, himalaya, indo-gangetic-plain, western-ghats, bengal-delta. Precipitation trends over 25 to 45 years carry wide intervals, so agreement is a lenient test; this check shows the datasets are consistent, not that either is exact.",
+   "sources": [
+    {
+     "citation": "NASA POWER monthly regional API, source-native MERRA-2 grid (Gelaro et al. 2017, J. Climate 30, 5419-5454)",
+     "url": "https://power.larc.nasa.gov/docs/",
+     "quote": "T2M and PRECTOTCORR, 1981-2025, area-weighted regional means (presets.json)."
+    },
+    {
+     "citation": "Adler, R. F. et al. (2018). The Global Precipitation Climatology Project (GPCP) Monthly Analysis (New Version 2.3). Atmosphere 9(4), 138",
+     "url": "https://doi.org/10.3390/atmos9040138",
+     "quote": "GPCP V2.3 combined precipitation, regional annual means (gpcp_series.json, NOAA PSL copy)."
+    }
+   ],
+   "details": {
+    "columns": [
+     "Region",
+     "MERRA-2 (mm/yr per decade)",
+     "GPCP (mm/yr per decade)",
+     "Detrended r",
+     "Agree"
+    ],
+    "rows": [
+     [
+      "whole-earth",
+      -9.41477,
+      10.5057,
+      -0.306019,
+      false
+     ],
+     [
+      "southern-ocean",
+      9.82248,
+      4.09782,
+      0.356031,
+      true
+     ],
+     [
+      "arctic",
+      2.76693,
+      24.4339,
+      0.235593,
+      true
+     ],
+     [
+      "antarctica",
+      16.0299,
+      8.68833,
+      0.483789,
+      true
+     ],
+     [
+      "siberia",
+      8.45803,
+      17.9163,
+      0.774555,
+      true
+     ],
+     [
+      "western-europe",
+      12.8239,
+      4.99304,
+      0.843088,
+      true
+     ],
+     [
+      "sahara",
+      3.61022,
+      4.7359,
+      0.593554,
+      true
+     ],
+     [
+      "sahel",
+      44.2559,
+      48.4292,
+      0.184271,
+      true
+     ],
+     [
+      "congo-basin",
+      -94.0542,
+      -11.967,
+      0.333202,
+      true
+     ],
+     [
+      "tropics",
+      -11.2114,
+      19.1964,
+      -0.310946,
+      false
+     ],
+     [
+      "maritime-southeast-asia",
+      92.7045,
+      25.8917,
+      0.966116,
+      true
+     ],
+     [
+      "australian-outback",
+      -11.178,
+      0.213889,
+      0.912765,
+      false
+     ],
+     [
+      "himalaya",
+      66.1319,
+      -13.6048,
+      0.546478,
+      false
+     ],
+     [
+      "indo-gangetic-plain",
+      102.163,
+      -16.9681,
+      0.539144,
+      false
+     ],
+     [
+      "western-ghats",
+      127.116,
+      -19.9147,
+      0.850654,
+      false
+     ],
+     [
+      "thar-northwest",
+      48.1576,
+      52.4353,
+      0.797659,
+      true
+     ],
+     [
+      "bengal-delta",
+      528.559,
+      -37.3371,
+      0.282009,
+      false
+     ]
+    ]
+   }
+  },
+  {
+   "id": "precip-imerg-vs-gpcp",
+   "title": "Precipitation: IMERG vs GPCP, 1998-2024",
+   "question": "Do two satellite precipitation products agree on the trend over the IMERG era?",
+   "kind": "internal",
+   "region": "All 17 regions in the app",
+   "period_ours": "1998-2024",
+   "period_reference": "1998-2024",
+   "units": "% of regions that agree",
+   "decimals": 0,
+   "our": {
+    "label": "IMERG vs GPCP: regions with same-sign, overlapping trends",
+    "value": 76.4706,
+    "ci_low": null,
+    "ci_high": null
+   },
+   "reference": {
+    "label": "Pass at 75% or more",
+    "value": 75,
+    "low": 75,
+    "high": null
+   },
+   "rule": "A region agrees if both datasets' Sen slopes have the same sign and their persistence-adjusted 95% intervals overlap. Pass if at least 75% of regions agree; partial if 50% to 75%; fail below 50%.",
+   "status": "pass",
+   "explanation": "IMERG and GPCP agree on the direction and size (within uncertainty) of the precipitation trend in 13 of 17 regions. Median detrended year-to-year correlation across regions r = 0.89. Disagreeing regions: southern-ocean, antarctica, tropics, maritime-southeast-asia. Precipitation trends over 25 to 45 years carry wide intervals, so agreement is a lenient test; this check shows the datasets are consistent, not that either is exact.",
+   "sources": [
+    {
+     "citation": "Huffman, G. J. et al. GPM IMERG Final Precipitation L3 1 month 0.1 degree x 0.1 degree V07 (GPM_3IMERGM), NASA GES DISC",
+     "url": "https://disc.gsfc.nasa.gov/datasets/GPM_3IMERGM_07/summary",
+     "quote": "Regional annual totals from Giovanni area averages (missions.json, IMERG_PRECIP)."
+    },
+    {
+     "citation": "Adler, R. F. et al. (2018). The Global Precipitation Climatology Project (GPCP) Monthly Analysis (New Version 2.3). Atmosphere 9(4), 138",
+     "url": "https://doi.org/10.3390/atmos9040138",
+     "quote": "GPCP V2.3 combined precipitation, regional annual means (gpcp_series.json, NOAA PSL copy)."
+    }
+   ],
+   "details": {
+    "columns": [
+     "Region",
+     "IMERG (mm/yr per decade)",
+     "GPCP (mm/yr per decade)",
+     "Detrended r",
+     "Agree"
+    ],
+    "rows": [
+     [
+      "whole-earth",
+      4.22039,
+      5.58235,
+      -0.0337753,
+      true
+     ],
+     [
+      "southern-ocean",
+      35.6995,
+      -2.2,
+      -0.183211,
+      false
+     ],
+     [
+      "arctic",
+      14.9968,
+      34.64,
+      0.783368,
+      true
+     ],
+     [
+      "antarctica",
+      56.6132,
+      14.2118,
+      0.278962,
+      false
+     ],
+     [
+      "siberia",
+      13.1959,
+      21.6571,
+      0.962167,
+      true
+     ],
+     [
+      "western-europe",
+      -1.64674,
+      -30.0083,
+      0.898118,
+      true
+     ],
+     [
+      "sahara",
+      0.267325,
+      8.18462,
+      0.711357,
+      true
+     ],
+     [
+      "sahel",
+      23.6961,
+      23.8833,
+      0.890575,
+      true
+     ],
+     [
+      "congo-basin",
+      -13.4379,
+      -20.7909,
+      0.763765,
+      true
+     ],
+     [
+      "tropics",
+      -2.80256,
+      9.7,
+      -0.103853,
+      false
+     ],
+     [
+      "maritime-southeast-asia",
+      21.2119,
+      -4.35556,
+      0.988648,
+      false
+     ],
+     [
+      "australian-outback",
+      -26.4233,
+      -30.53,
+      0.99393,
+      true
+     ],
+     [
+      "himalaya",
+      11.0918,
+      0.292857,
+      0.861276,
+      true
+     ],
+     [
+      "indo-gangetic-plain",
+      -5.43228,
+      -3.7875,
+      0.959174,
+      true
+     ],
+     [
+      "western-ghats",
+      108.929,
+      73.8154,
+      0.905138,
+      true
+     ],
+     [
+      "thar-northwest",
+      94.7627,
+      102.56,
+      0.981446,
+      true
+     ],
+     [
+      "bengal-delta",
+      -101.304,
+      -181.4,
+      0.951968,
+      true
+     ]
+    ]
+   }
+  },
+  {
+   "id": "seawifs-river-chlorophyll",
+   "title": "SeaWiFS chlorophyll near river mouths (challenge paper)",
+   "question": "Can we reproduce the coastal chlorophyll trends in the paper the challenge lists?",
+   "kind": "not-comparable",
+   "region": "Nine river-influenced coastal regions (paper) vs global ocean boxes (ours)",
+   "period_ours": "-",
+   "period_reference": "SeaWiFS era (study period not stated on the NTRS page)",
+   "units": "-",
+   "decimals": 0,
+   "our": {
+    "label": "Not computed",
+    "value": null,
+    "ci_low": null,
+    "ci_high": null
+   },
+   "reference": {
+    "label": "Acker et al. 2009: low-impact rivers show no significant trend; most human-impacted rivers show significant decreases (Pearl River increases)",
+    "value": null,
+    "low": null,
+    "high": null
+   },
+   "rule": "Not scored. A check needs the same quantity in the same place: the paper's nine river-mouth boxes are not published as files, and our ocean chlorophyll series is the NOBM model, not SeaWiFS.",
+   "status": "not-comparable",
+   "explanation": "We deliberately do not score this one. The paper analyses SeaWiFS satellite chlorophyll in nine small coastal boxes, where dissolved organic matter and sediment disturb the signal; our NOBM chlorophyll is a model product on coarse regional boxes that contain no river-mouth cells. Comparing them would produce a number with no meaning. What carries over is the lesson: coastal chlorophyll trends can reflect floods and water colour, not just phytoplankton, so we flag such series with cautions.",
+   "sources": [
+    {
+     "citation": "Acker, J. G., McMahon, E., Shen, S., Hearty, T., Casey, N. (2009). Time-Series Analysis of Remotely-Sensed SeaWiFS Chlorophyll in River-Influenced Coastal Regions. EARSeL eProceedings 8(2). NASA NTRS 20090042747",
+     "url": "https://ntrs.nasa.gov/citations/20090042747",
+     "quote": "Nine river-influenced marine regions; \"major river systems in regions with relatively low human impact showed no significant trends\"; most systems with clear human impact showed significant negative trends, the exception being the Pearl River (positive). (paraphrased from the NTRS abstract; the page does not state the study period)."
+    }
+   ]
+  }
+ ]
+}

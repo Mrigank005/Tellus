@@ -1,0 +1,716 @@
+{
+  "domain": {
+    "name": "Whole Earth",
+    "lon_min": -180.0,
+    "lon_max": 180.0,
+    "lat_min": -90.0,
+    "lat_max": 90.0,
+    "resolution": 0.5,
+    "crs": "WGS84"
+  },
+  "power": {
+    "base_url": "https://power.larc.nasa.gov/api/temporal/monthly/regional",
+    "community": "AG",
+    "start_year": 1981,
+    "end_year": 2025,
+    "tile_degrees": 10,
+    "max_workers": 5,
+    "politeness_delay_s": 0.3,
+    "fill_value": -999.0
+  },
+  "gpcp": {
+    "url": "https://downloads.psl.noaa.gov/Datasets/gpcp/precip.mon.mean.nc",
+    "version": "GPCP V2.3 Combined Precipitation Dataset (Final)",
+    "source": "NOAA PSL / NASA GES DISC"
+  },
+  "variables": [
+    {
+      "id": "T2M",
+      "short_name": "Temperature",
+      "long_name": "Air Temperature at 2 Meters",
+      "definition": "The average temperature of the air 2 metres above the ground, the height standard weather stations measure at.",
+      "units": "°C",
+      "monthly_units": "°C (monthly mean)",
+      "aggregation": "mean",
+      "trend_units": "°C per decade",
+      "higher_means": "warmer",
+      "suitable_for": "Warming and cooling questions",
+      "caveat": "Reanalysis 2-metre temperature can diverge from surface-station records over the Indo-Gangetic Plain, where station data show stronger warming. Regional results there deserve extra caution.",
+      "power_parameter": "T2M"
+    },
+    {
+      "id": "T2M_MAX",
+      "short_name": "Daytime max temperature",
+      "long_name": "Maximum Temperature at 2 Meters",
+      "definition": "The highest air temperature reached each month, 2 metres above the ground. Reflects how hot days become.",
+      "units": "°C",
+      "monthly_units": "°C (monthly mean of daily maxima)",
+      "aggregation": "mean",
+      "trend_units": "°C per decade",
+      "higher_means": "hotter daytime extremes",
+      "suitable_for": "Heat-extreme questions",
+      "power_parameter": "T2M_MAX"
+    },
+    {
+      "id": "T2M_MIN",
+      "short_name": "Nighttime min temperature",
+      "long_name": "Minimum Temperature at 2 Meters",
+      "definition": "The lowest air temperature reached each month, 2 metres above the ground. Reflects how cold nights become.",
+      "units": "°C",
+      "monthly_units": "°C (monthly mean of daily minima)",
+      "aggregation": "mean",
+      "trend_units": "°C per decade",
+      "higher_means": "warmer nights",
+      "suitable_for": "Nighttime warming questions",
+      "power_parameter": "T2M_MIN"
+    },
+    {
+      "id": "PRECTOTCORR",
+      "short_name": "Precipitation",
+      "long_name": "Corrected Total Precipitation",
+      "definition": "All rain and snow that reaches the ground, bias-corrected against ground stations. Monthly values are averages in millimetres per day; the tool converts them to totals.",
+      "units": "mm",
+      "monthly_units": "mm/day (monthly mean rate)",
+      "aggregation": "sum",
+      "trend_units": "mm per decade",
+      "higher_means": "wetter",
+      "suitable_for": "Rainfall increase/decrease questions",
+      "caution": "Rainfall alone cannot establish drought or aridity; combine with soil wetness and evaporation.",
+      "known_divergence": "MERRA-2 precipitation over South Asia shows stronger wetting trends than observed datasets (GPCP). Always check the GPCP observed cross-check panel for this variable.",
+      "power_parameter": "PRECTOTCORR"
+    },
+    {
+      "id": "RH2M",
+      "short_name": "Relative humidity",
+      "long_name": "Relative Humidity at 2 Meters",
+      "definition": "How close the air is to saturation with water vapour (100% = fully saturated).",
+      "units": "%",
+      "monthly_units": "% (monthly mean)",
+      "aggregation": "mean",
+      "trend_units": "percentage points per decade",
+      "higher_means": "more humid",
+      "suitable_for": "Moisture and heat-stress context",
+      "power_parameter": "RH2M"
+    },
+    {
+      "id": "WS10M",
+      "short_name": "Wind speed",
+      "long_name": "Wind Speed at 10 Meters",
+      "definition": "The average speed of wind 10 metres above the ground.",
+      "units": "m/s",
+      "monthly_units": "m/s (monthly mean)",
+      "aggregation": "mean",
+      "trend_units": "m/s per decade",
+      "higher_means": "windier",
+      "suitable_for": "Wind-energy and storm-context questions",
+      "power_parameter": "WS10M"
+    },
+    {
+      "id": "GWETTOP",
+      "short_name": "Surface soil wetness",
+      "long_name": "Surface Soil Wetness (top 5 cm)",
+      "definition": "How wet the topmost soil layer is, from 0 (bone dry) to 1 (saturated), estimated by a land surface model.",
+      "units": "0–1 fraction",
+      "monthly_units": "0–1 (monthly mean)",
+      "aggregation": "mean",
+      "trend_units": "fraction per decade",
+      "higher_means": "wetter soils",
+      "suitable_for": "Drying/wetting context (with caution)",
+      "caution": "Model estimate, not a measurement; drought assessment needs more than one variable.",
+      "power_parameter": "GWETTOP"
+    },
+    {
+      "id": "EVLAND",
+      "short_name": "Evaporation",
+      "long_name": "Evaporation over Land",
+      "definition": "Water evaporated from land and plants into the air. Monthly values are averages in millimetres per day; the tool converts them to totals.",
+      "units": "mm",
+      "monthly_units": "mm/day (monthly mean rate)",
+      "aggregation": "sum",
+      "trend_units": "mm per decade",
+      "higher_means": "more evaporative demand",
+      "suitable_for": "Water-loss context",
+      "power_parameter": "EVLAND"
+    }
+  ],
+  "seasons": {
+    "annual": {
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "label": "Whole year"
+    },
+    "JJAS": {
+      "months": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "label": "Jun–Sep (S. Asian monsoon)"
+    },
+    "DJF": {
+      "months": [
+        12,
+        1,
+        2
+      ],
+      "label": "Dec–Feb (N. hemisphere winter)",
+      "convention": "December–February of year N uses December of N-1 plus January and February of N."
+    }
+  },
+  "windows": [
+    {
+      "id": "full",
+      "start": 1981,
+      "end": 2025,
+      "label": "Full record (1981–2025)",
+      "frozen": false
+    },
+    {
+      "id": "w30",
+      "start": 1996,
+      "end": 2025,
+      "label": "Recent 30 years (1996–2025)",
+      "frozen": false
+    },
+    {
+      "id": "w20",
+      "start": 2006,
+      "end": 2025,
+      "label": "Recent 20 years (2006–2025)",
+      "frozen": false
+    }
+  ],
+  "regions": [
+    {
+      "id": "whole-earth",
+      "name": "Whole Earth",
+      "description": "Every grid cell on the planet, land and ocean — the global mean baseline.",
+      "polygon": [
+        [
+          -180.0,
+          -90.0
+        ],
+        [
+          -180.0,
+          90.0
+        ],
+        [
+          180.0,
+          90.0
+        ],
+        [
+          180.0,
+          -90.0
+        ]
+      ]
+    },
+    {
+      "id": "southern-ocean",
+      "name": "Southern Ocean",
+      "description": "The ring of ocean around Antarctica, south of 45°S.",
+      "polygon": [
+        [
+          -180.0,
+          -70.0
+        ],
+        [
+          -180.0,
+          -45.0
+        ],
+        [
+          180.0,
+          -45.0
+        ],
+        [
+          180.0,
+          -70.0
+        ]
+      ]
+    },
+    {
+      "id": "nino34",
+      "name": "Niño 3.4 (Pacific)",
+      "description": "The central-Pacific box whose sea-surface temperature defines El Niño and La Niña.",
+      "polygon": [
+        [
+          -170.0,
+          -5.0
+        ],
+        [
+          -170.0,
+          5.0
+        ],
+        [
+          -120.0,
+          5.0
+        ],
+        [
+          -120.0,
+          -5.0
+        ]
+      ]
+    },
+    {
+      "id": "arctic",
+      "name": "The Arctic",
+      "description": "Everything north of 66.5°N — the fastest-warming large region on Earth.",
+      "polygon": [
+        [
+          -180.0,
+          66.5
+        ],
+        [
+          -180.0,
+          90.0
+        ],
+        [
+          180.0,
+          90.0
+        ],
+        [
+          180.0,
+          66.5
+        ]
+      ]
+    },
+    {
+      "id": "antarctica",
+      "name": "Antarctica",
+      "description": "The frozen continent and adjacent ice shelf seas, south of 60°S.",
+      "polygon": [
+        [
+          -180.0,
+          -90.0
+        ],
+        [
+          -180.0,
+          -60.0
+        ],
+        [
+          180.0,
+          -60.0
+        ],
+        [
+          180.0,
+          -90.0
+        ]
+      ]
+    },
+    {
+      "id": "greenland",
+      "name": "Greenland",
+      "description": "The Greenland ice sheet and its coastal margins.",
+      "polygon": [
+        [
+          -55.0,
+          60.0
+        ],
+        [
+          -55.0,
+          84.0
+        ],
+        [
+          -20.0,
+          84.0
+        ],
+        [
+          -20.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "id": "siberia",
+      "name": "Siberia",
+      "description": "The vast cold forests and tundra of northern Asia.",
+      "polygon": [
+        [
+          60.0,
+          55.0
+        ],
+        [
+          60.0,
+          75.0
+        ],
+        [
+          140.0,
+          75.0
+        ],
+        [
+          140.0,
+          55.0
+        ]
+      ]
+    },
+    {
+      "id": "western-europe",
+      "name": "Western Europe",
+      "description": "From the Atlantic coast to the plains of central Europe.",
+      "polygon": [
+        [
+          -10.0,
+          40.0
+        ],
+        [
+          -10.0,
+          60.0
+        ],
+        [
+          25.0,
+          60.0
+        ],
+        [
+          25.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "id": "sahara",
+      "name": "The Sahara",
+      "description": "The world's largest hot desert, across northern Africa.",
+      "polygon": [
+        [
+          -17.0,
+          16.0
+        ],
+        [
+          -17.0,
+          30.0
+        ],
+        [
+          35.0,
+          30.0
+        ],
+        [
+          35.0,
+          16.0
+        ]
+      ]
+    },
+    {
+      "id": "sahel",
+      "name": "The Sahel",
+      "description": "The semi-arid transition belt south of the Sahara, where desert and savanna meet.",
+      "polygon": [
+        [
+          -17.0,
+          10.0
+        ],
+        [
+          -17.0,
+          16.0
+        ],
+        [
+          35.0,
+          16.0
+        ],
+        [
+          35.0,
+          10.0
+        ]
+      ]
+    },
+    {
+      "id": "congo-basin",
+      "name": "Congo Basin",
+      "description": "The rainforest heart of Africa, the planet's second lung.",
+      "polygon": [
+        [
+          9.0,
+          -6.0
+        ],
+        [
+          9.0,
+          4.0
+        ],
+        [
+          30.0,
+          4.0
+        ],
+        [
+          30.0,
+          -6.0
+        ]
+      ]
+    },
+    {
+      "id": "amazon",
+      "name": "Amazonia",
+      "description": "The Amazon rainforest and river basin — the largest rainforest on Earth.",
+      "polygon": [
+        [
+          -75.0,
+          -12.0
+        ],
+        [
+          -75.0,
+          4.0
+        ],
+        [
+          -48.0,
+          4.0
+        ],
+        [
+          -48.0,
+          -12.0
+        ]
+      ]
+    },
+    {
+      "id": "andes",
+      "name": "The Andes",
+      "description": "The mountain spine of South America, from Patagonia to the equator.",
+      "polygon": [
+        [
+          -80.0,
+          -45.0
+        ],
+        [
+          -72.0,
+          5.0
+        ],
+        [
+          -64.0,
+          5.0
+        ],
+        [
+          -72.0,
+          -45.0
+        ]
+      ]
+    },
+    {
+      "id": "us-great-plains",
+      "name": "US Great Plains",
+      "description": "The grain-growing heartland of North America.",
+      "polygon": [
+        [
+          -105.0,
+          32.0
+        ],
+        [
+          -105.0,
+          49.0
+        ],
+        [
+          -95.0,
+          49.0
+        ],
+        [
+          -95.0,
+          32.0
+        ]
+      ]
+    },
+    {
+      "id": "tropics",
+      "name": "The Tropics",
+      "description": "The band between 23.5°S and 23.5°N — for comparison against the poles.",
+      "polygon": [
+        [
+          -180.0,
+          -23.5
+        ],
+        [
+          -180.0,
+          23.5
+        ],
+        [
+          180.0,
+          23.5
+        ],
+        [
+          180.0,
+          -23.5
+        ]
+      ]
+    },
+    {
+      "id": "maritime-southeast-asia",
+      "name": "Maritime Southeast Asia",
+      "description": "Indonesia, the Philippines and the surrounding seas.",
+      "polygon": [
+        [
+          95.0,
+          -11.0
+        ],
+        [
+          95.0,
+          8.0
+        ],
+        [
+          130.0,
+          8.0
+        ],
+        [
+          130.0,
+          -11.0
+        ]
+      ]
+    },
+    {
+      "id": "australian-outback",
+      "name": "Australian outback",
+      "description": "The arid and semi-arid interior of Australia.",
+      "polygon": [
+        [
+          114.0,
+          -32.0
+        ],
+        [
+          114.0,
+          -20.0
+        ],
+        [
+          142.0,
+          -20.0
+        ],
+        [
+          142.0,
+          -32.0
+        ]
+      ]
+    },
+    {
+      "id": "himalaya",
+      "name": "Himalayan highlands",
+      "description": "The high mountain belt between the Indian subcontinent and the Tibetan Plateau.",
+      "polygon": [
+        [
+          72.0,
+          28.0
+        ],
+        [
+          72.0,
+          36.0
+        ],
+        [
+          96.0,
+          36.0
+        ],
+        [
+          96.0,
+          28.0
+        ]
+      ]
+    },
+    {
+      "id": "indo-gangetic-plain",
+      "name": "Indo-Gangetic Plain",
+      "description": "The fertile, densely populated plain south of the Himalaya watered by the Indus and Ganges systems.",
+      "polygon": [
+        [
+          72.0,
+          24.0
+        ],
+        [
+          72.0,
+          31.5
+        ],
+        [
+          80.0,
+          31.5
+        ],
+        [
+          88.0,
+          29.5
+        ],
+        [
+          92.0,
+          25.5
+        ],
+        [
+          88.0,
+          22.5
+        ],
+        [
+          78.0,
+          22.5
+        ]
+      ]
+    },
+    {
+      "id": "western-ghats",
+      "name": "Western Ghats",
+      "description": "The mountain range along India's west coast that intercepts the monsoon.",
+      "polygon": [
+        [
+          73.0,
+          8.0
+        ],
+        [
+          73.0,
+          20.0
+        ],
+        [
+          75.5,
+          20.0
+        ],
+        [
+          75.5,
+          8.0
+        ]
+      ]
+    },
+    {
+      "id": "thar-northwest",
+      "name": "Thar Desert & arid northwest",
+      "description": "The arid region of Rajasthan and neighbouring areas.",
+      "polygon": [
+        [
+          68.0,
+          24.0
+        ],
+        [
+          68.0,
+          30.0
+        ],
+        [
+          75.0,
+          30.0
+        ],
+        [
+          75.0,
+          24.0
+        ]
+      ]
+    },
+    {
+      "id": "bengal-delta",
+      "name": "Bengal Delta",
+      "description": "The Ganges–Brahmaputra delta in Bangladesh and eastern India.",
+      "polygon": [
+        [
+          88.0,
+          21.0
+        ],
+        [
+          88.0,
+          25.0
+        ],
+        [
+          93.0,
+          25.0
+        ],
+        [
+          93.0,
+          21.0
+        ]
+      ]
+    }
+  ]
+}
