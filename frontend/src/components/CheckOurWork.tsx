@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon, type IconName } from './Icon'
 
 /** "Check our work": our numbers next to published / independent reference values.
  *  Data comes from public/data/validation.json, built by pipeline/build_validation.py. */
@@ -60,76 +61,93 @@ function refText(c: Case): string {
   return fmt(value, c.decimals)
 }
 
-function CaseCard({ c }: { c: Case }) {
+const STAMP: Record<Status, { cls: string; icon: IconName | null }> = {
+  pass: { cls: 'pass', icon: 'check' },
+  partial: { cls: 'partial', icon: 'tilde' },
+  fail: { cls: 'miss', icon: 'x' },
+  'not-comparable': { cls: 'na', icon: null },
+}
+
+function Stamp({ status }: { status: Status }) {
+  const s = STAMP[status]
   return (
-    <div className="card checkcard">
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h3 style={{ marginBottom: 2 }}>{c.title}</h3>
-          <div className="muted small">{c.question}</div>
+    <span className={`stamp ${s.cls}`}>
+      {s.icon && <Icon name={s.icon} />}
+      {STATUS_LABEL[status]}
+    </span>
+  )
+}
+
+function LedgerEntry({ c }: { c: Case }) {
+  const comparable = c.status !== 'not-comparable'
+  return (
+    <article className="chk-entry" aria-labelledby={`chk-${c.id}`}>
+      <div className="chk-row">
+        <div className="chk-q">
+          <h3 id={`chk-${c.id}`}>{c.title}</h3>
+          <p>{c.question}</p>
         </div>
-        <span className={`pill pill-${c.status}`}>{STATUS_LABEL[c.status]}</span>
+        <div className="chk-cell chk-ours">
+          <span className="chk-k">Our number ({c.period_ours})</span>
+          <span className="chk-v mono">{comparable ? ourText(c) : 'not compared'}</span>
+          {comparable && <span className="chk-u">{c.units}</span>}
+        </div>
+        <div className="chk-cell chk-ref">
+          <span className="chk-k">Published reference ({c.period_reference})</span>
+          <span className="chk-v mono">{comparable ? refText(c) : 'see below'}</span>
+          {c.sources[0] && (
+            <a className="source" href={c.sources[0].url} target="_blank" rel="noreferrer">
+              <Icon name="book" /><span>{c.sources[0].citation}</span>
+            </a>
+          )}
+        </div>
+        <div className="chk-stamp"><Stamp status={c.status} /></div>
       </div>
 
-      {c.status !== 'not-comparable' && (
-        <div style={{ marginTop: 10 }}>
-          <div className="statrow">
-            <span className="k">Our number ({c.period_ours})</span>
-            <span className="v">{ourText(c)}</span>
-          </div>
-          <div className="statrow">
-            <span className="k">Reference ({c.period_reference})</span>
-            <span className="v">{refText(c)}</span>
-          </div>
-          <div className="statrow">
-            <span className="k">Units</span>
-            <span className="v">{c.units}</span>
-          </div>
-          <div className="statrow">
-            <span className="k">Region</span>
-            <span className="v" style={{ textAlign: 'right' }}>{c.region}</span>
-          </div>
+      <div className="chk-body">
+        <div className="chk-prose">
+          {comparable && <p className="chk-region"><b>Region:</b> {c.region}</p>}
+          <p><b>Ours:</b> {c.our.label}</p>
+          <p><b>Reference:</b> {c.reference.label}</p>
+          <p><b>The rule (fixed before we looked at the result):</b> {c.rule}</p>
+          <p className="chk-explain">{c.explanation}</p>
         </div>
-      )}
 
-      <p className="small muted" style={{ marginTop: 10 }}><b>Ours:</b> {c.our.label}</p>
-      <p className="small muted" style={{ margin: '2px 0 8px' }}><b>Reference:</b> {c.reference.label}</p>
-
-      <p className="small" style={{ marginTop: 8 }}><b>The rule (fixed before we looked at the result):</b> {c.rule}</p>
-      <p className="small">{c.explanation}</p>
+        <div className="chk-sources">
+          <h4>Sources</h4>
+          <ul>
+            {c.sources.map((s) => (
+              <li key={s.url + s.citation}>
+                <a href={s.url} target="_blank" rel="noreferrer">{s.citation}</a>
+                {s.quote && <blockquote>{s.quote}</blockquote>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
       {c.details && (
-        <details className="small" style={{ marginTop: 6 }}>
+        <details className="chk-details">
           <summary>Region-by-region detail</summary>
-          <table className="checktable">
-            <thead>
-              <tr>{c.details.columns.map((h) => <th key={h}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {c.details.rows.map((r, i) => (
-                <tr key={i}>
-                  {r.map((cell, j) => (
-                    <td key={j}>{typeof cell === 'boolean' ? (cell ? 'yes' : 'no') : cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="chk-tablewrap">
+            <table className="chk-table">
+              <thead>
+                <tr>{c.details.columns.map((h) => <th key={h} scope="col">{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {c.details.rows.map((r, i) => (
+                  <tr key={i}>
+                    {r.map((cell, j) => (
+                      <td key={j}>{typeof cell === 'boolean' ? (cell ? 'yes' : 'no') : cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </details>
       )}
-
-      <div className="small" style={{ marginTop: 8 }}>
-        <b>Sources</b>
-        <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
-          {c.sources.map((s) => (
-            <li key={s.url + s.citation}>
-              <a href={s.url} target="_blank" rel="noreferrer">{s.citation}</a>
-              {s.quote && <div className="muted">{s.quote}</div>}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    </article>
   )
 }
 
@@ -149,7 +167,7 @@ export default function CheckOurWork() {
 
   if (err) {
     return (
-      <div className="container">
+      <div className="chk wrap">
         <div className="cautionbox">Could not load the validation results ({err}).</div>
       </div>
     )
@@ -158,44 +176,44 @@ export default function CheckOurWork() {
 
   const s = data.summary
   return (
-    <div className="container">
-      <h2>Check our work</h2>
-      <p className="sub">
-        Our numbers next to published or independent reference values, each with a pass rule
-        that was written down before the result was known.
-      </p>
+    <div className="chk wrap">
+      <header className="chk-head">
+        <h1 className="title">We checked our own work.</h1>
+        <p className="lede">
+          Our numbers next to published or independent reference values, each with a pass rule
+          that was written down before the result was known.
+        </p>
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <h3 style={{ fontSize: 20, marginBottom: 6 }}>
-          {s.pass} of {s.scored} checks pass
-        </h3>
-        <div className="row">
-          <span className="pill pill-pass">{s.pass} pass</span>
-          <span className="pill pill-partial">{s.partial} partial</span>
-          <span className="pill pill-fail">{s.fail} do not match</span>
+        <p className="chk-score"><span className="num">{s.pass}</span> of <span className="num">{s.scored}</span> checks pass</p>
+        <div className="chk-tally">
+          <span className="stamp pass"><Icon name="check" />{s.pass} pass</span>
+          <span className="stamp partial"><Icon name="tilde" />{s.partial} partial</span>
+          <span className="stamp miss"><Icon name="x" />{s.fail} do not match</span>
           {s.not_comparable > 0 && (
-            <span className="pill pill-not-comparable">{s.not_comparable} not comparable (explained)</span>
+            <span className="stamp na">{s.not_comparable} not comparable (explained)</span>
           )}
         </div>
-        <p className="small muted" style={{ marginTop: 10 }}>
+        <p className="note chk-verified">
           We report the misses as plainly as the passes. Reference figures were re-read from the sources
-          linked on each card on {data.references_verified_on}.
+          linked on each entry on {data.references_verified_on}.
         </p>
-      </div>
+      </header>
 
-      <div className="cautionbox" style={{ marginBottom: 14 }}>
+      <div className="cautionbox chk-caution">
         <b>What these checks do and do not prove.</b> They show that the data we ship and the statistics we
         run give answers in line with independent science, within the stated rule. They do not prove that
         every region, season or variable in the app is right: a reanalysis is a model, regional boxes
         are coarse, and short records have wide uncertainty. A partial result usually points to a
-        known difference in what is being measured, and each card says which.
+        known difference in what is being measured, and each entry says which.
       </div>
 
-      <div className="checkgrid">
-        {data.cases.map((c) => <CaseCard key={c.id} c={c} />)}
+      <div className="chk-ledger" role="list">
+        {data.cases.map((c) => (
+          <div role="listitem" key={c.id}><LedgerEntry c={c} /></div>
+        ))}
       </div>
 
-      <p className="small muted" style={{ marginTop: 14 }}>{data.method}</p>
+      <p className="note chk-method">{data.method}</p>
     </div>
   )
 }

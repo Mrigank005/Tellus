@@ -1,6 +1,7 @@
 import type { Catalog, VariableMeta, TrendPack } from '../engine/loader'
 import type { RegionAnalysis } from '../engine/analysis'
 import type { Summarized } from '../engine/stats'
+import { Icon } from './Icon'
 
 /** Evidence package export: CSV, provenance JSON, printable report. */
 export default function ExportPanel({ cat, variable, regionName, polygon, windowMeta, seasonLabel, analysis, pack, compare }: {
@@ -74,42 +75,52 @@ export default function ExportPanel({ cat, variable, regionName, polygon, window
   }
 
   const slope10 = 'senSlope' in s ? s.senSlope * 10 : null
+  const verdictWords: Record<string, string> = {
+    'detected-increase': 'Statistically detected increase',
+    'detected-decrease': 'Statistically detected decrease',
+    'no-detected-trend': 'No statistically detected trend',
+    'insufficient-data': 'Insufficient data',
+  }
 
   return (
-    <div>
-      <p className="muted small">
+    <div className="desk-export">
+      <p className="note">
         Everything an analysis produces is reproducible: the data version, the exact method
         settings, the regional series, and the full provenance chain — enough for a teacher,
         a student, or a scientist to check the work.
       </p>
-      <div className="row">
-        <button className="ghost" onClick={exportCsv}>⬇ Observations CSV</button>
-        <button className="ghost" onClick={exportJson}>⬇ Provenance JSON</button>
-        <button className="ghost" onClick={() => window.print()}>🖨 Printable report</button>
+      <div className="row no-print">
+        <button className="btn ghost sm" onClick={exportCsv}><Icon name="arrow" className="down" />Observations CSV</button>
+        <button className="btn ghost sm" onClick={exportJson}><Icon name="arrow" className="down" />Provenance JSON</button>
+        <button className="btn ghost sm" onClick={() => window.print()}><Icon name="book" />Printable report</button>
       </div>
-      <div className="card" style={{ marginTop: 14, background: '#fff', color: '#111', border: 'none' }}>
-        <div style={{ display: 'none' }} />
-        <h3 style={{ color: '#111' }}>Tellus evidence report</h3>
-        <table style={{ fontSize: 13, borderCollapse: 'collapse' }}>
+      <article className="report" aria-label="Tellus evidence report">
+        <div className="report-head">
+          <h3>Tellus evidence report</h3>
+          <span className="row">
+            <a className="source" href="https://power.larc.nasa.gov/" target="_blank" rel="noopener noreferrer"><Icon name="sat" />NASA POWER &middot; MERRA-2</a>
+          </span>
+        </div>
+        <table className="report-table">
           <tbody>
-            <tr><td style={{ padding: '3px 12px 3px 0', color: '#555' }}>Variable</td><td><b>{variable.long_name}</b> ({variable.units})</td></tr>
-            <tr><td style={{ padding: '3px 12px 3px 0', color: '#555' }}>Region</td><td>{regionName} — {analysis.series.nCells} grid cells ({polygon ? 'polygon centres, cos-latitude weighted' : '—'})</td></tr>
-            <tr><td style={{ padding: '3px 12px 3px 0', color: '#555' }}>Period</td><td>{windowMeta.label} · {seasonLabel}</td></tr>
-            <tr><td style={{ padding: '3px 12px 3px 0', color: '#555' }}>Verdict</td><td><b>{s.label}</b></td></tr>
+            <tr><th scope="row">Variable</th><td><b>{variable.long_name}</b> ({variable.units})</td></tr>
+            <tr><th scope="row">Region</th><td>{regionName} — {analysis.series.nCells} grid cells ({polygon ? 'polygon centres, cos-latitude weighted' : '—'})</td></tr>
+            <tr><th scope="row">Period</th><td>{windowMeta.label} · {seasonLabel}</td></tr>
+            <tr><th scope="row">Verdict</th><td><b>{verdictWords[s.label] ?? s.label}</b></td></tr>
             {slope10 !== null && Number.isFinite(slope10) && (
-              <tr><td style={{ padding: '3px 12px 3px 0', color: '#555' }}>Trend</td>
-                <td>{slope10 >= 0 ? '+' : ''}{slope10.toFixed(3)} {variable.trend_units}
+              <tr><th scope="row">Trend</th>
+                <td className="num">{slope10 >= 0 ? '+' : ''}{slope10.toFixed(3)} {variable.trend_units}
                   {' (95% CI ' + ((s as Summarized).ciLow * 10).toFixed(3) + ' to ' + ((s as Summarized).ciHigh * 10).toFixed(3) + ')'}</td></tr>
             )}
-            <tr><td style={{ padding: '3px 12px 3px 0', color: '#555' }}>Data</td><td>NASA POWER monthly (MERRA-2), 1981–2025 · GPCP V2.3 for observed precipitation</td></tr>
-            <tr><td style={{ padding: '3px 12px 3px 0', color: '#555' }}>Method</td><td>Sen's slope · Mann-Kendall (α={cat.methods!.alpha}) · Gilbert 95% CI · BH-FDR over {pack?.nEligible.toLocaleString() ?? '—'} map cells</td></tr>
+            <tr><th scope="row">Data</th><td>NASA POWER monthly (MERRA-2), 1981–2025 · GPCP V2.3 for observed precipitation</td></tr>
+            <tr><th scope="row">Method</th><td>Sen's slope · Mann-Kendall (α={cat.methods!.alpha}) · Gilbert 95% CI · BH-FDR over {pack?.nEligible.toLocaleString() ?? '—'} map cells</td></tr>
           </tbody>
         </table>
-        <p style={{ color: '#555', fontSize: 12, marginTop: 10 }}>
+        <p className="note">
           Generated by Tellus. Colour never encodes “good” or “bad”. Missing months are
           never treated as zero. Results describe the analysed record, not the future.
         </p>
-      </div>
+      </article>
     </div>
   )
 }

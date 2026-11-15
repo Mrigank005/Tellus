@@ -77,7 +77,7 @@ export function regionSeries(
 
 /** Area fraction in each category; area weight ~ cos(latitude). */
 export function areaFractionsByCategory(
-  labels: Uint8Array,          // [nLat*nLon] label codes 0..3 (+ caution bit)
+  labels: Uint8Array,          // [nLat*nLon] label codes 0..3 in the low bits; 0x40 naive-only and 0x80 caution are flags
   lats: Float64Array,
   lons: Float64Array,
   mask?: Uint8Array,
@@ -92,7 +92,7 @@ export function areaFractionsByCategory(
       const idx = i * nl + j
       if (mask && !mask[idx]) continue
       total += w
-      const code = labels[idx] & 0x7f
+      const code = labels[idx] & 0x3f
       if (code < 4) sums[code] += w
     }
   }

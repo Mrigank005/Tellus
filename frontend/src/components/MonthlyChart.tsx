@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
 import { useChart } from '../hooks/useChart'
+import ChartLegend from './ChartLegend'
+import { useTheme } from '../state/theme'
+import { chartBase } from '../styles/tokens'
 
 /**
  * S7 — the seasonal-cycle reveal. Shows the RAW monthly series next to the
@@ -7,16 +10,20 @@ import { useChart } from '../hooks/useChart'
  * that hides trends and what removing it exposes.
  */
 export default function MonthlyChart({
-  months, values, mode, units, color, regionName,
+  months, values, mode, units, regionName,
 }: {
   months: number[]
   values: (number | null)[]
   mode: 'monthly' | 'deseasonalised'
   units: string
-  color: string
+  /** accepted for compatibility; colours come from the design tokens */
+  color?: string
   regionName: string
 }) {
+  const theme = useTheme((s) => s.theme)
   const option = useMemo(() => {
+    const base = chartBase(theme)
+    const t = base.t
     const xs = months.map((m) => (m / 100) + ((m % 100) - 0.5) / 12) // decimal years
     let ys: (number | null)[] = values
 
@@ -43,7 +50,7 @@ export default function MonthlyChart({
         name: mode === 'monthly' ? 'Monthly values' : 'Deseasonalised anomalies',
         type: 'line', symbol: 'none',
         data: xs.map((x, i) => [x, ys[i] === null ? null : +(ys[i] as number).toFixed(3)]),
-        lineStyle: { width: 1.2, color }, itemStyle: { color },
+        lineStyle: { width: 1.2, color: t.ink }, itemStyle: { color: t.ink },
       },
     ]
     if (mode === 'monthly') {
@@ -68,41 +75,45 @@ export default function MonthlyChart({
       series.push({
         name: 'Average yearly cycle', type: 'line', symbol: 'none',
         data: climXs.map((x, i) => [x, climYs[i]]),
-        lineStyle: { width: 3, color: '#ffb547', opacity: 0.9 },
-        itemStyle: { color: '#ffb547' },
+        lineStyle: { width: 3, color: t.copper },
+        itemStyle: { color: t.copper }, z: 3,
       })
     }
 
     return {
-      backgroundColor: 'transparent',
-      grid: { left: 58, right: 18, top: 34, bottom: 34 },
+      backgroundColor: base.backgroundColor,
+      textStyle: base.textStyle,
+      grid: { left: 58, right: 18, top: 30, bottom: 34 },
       tooltip: {
-        trigger: 'axis', backgroundColor: '#101a2c', borderColor: '#233',
-        textStyle: { color: '#e7edf7', fontSize: 12 },
+        ...base.tooltip, trigger: 'axis',
+        axisPointer: { type: 'line', lineStyle: { color: t.copper, type: 'dashed', width: 1 } },
       },
-      legend: { show: mode === 'monthly', textStyle: { color: '#8b98b0', fontSize: 12 }, top: 2 },
       xAxis: {
         type: 'value', min: Math.floor(xs[0]), max: Math.ceil(xs[xs.length - 1]),
-        axisLine: { lineStyle: { color: '#2a3a5c' } }, axisLabel: { color: '#8b98b0' },
-        splitLine: { show: false }, name: 'year', nameTextStyle: { color: '#8b98b0' },
+        ...base.axis, splitLine: { show: false }, name: '', axisLabel: { ...base.axis.axisLabel, formatter: (v: number) => String(v), hideOverlap: true },
       },
       yAxis: {
-        type: 'value', scale: true, axisLabel: { color: '#8b98b0' },
-        splitLine: { lineStyle: { color: '#16213a' } },
+        type: 'value', scale: true, ...base.axis,
         name: mode === 'monthly' ? units : `${units} (vs seasonal normal)`,
-        nameTextStyle: { color: '#8b98b0' },
+        nameTextStyle: { ...base.axis.nameTextStyle, align: 'left' },
       },
       series,
     }
-  }, [months, values, mode, units, color])
+  }, [months, values, mode, units, theme])
 
   const ref = useChart(option as never)
   return (
     <div>
-      <div ref={ref} className="chart" />
+      <ChartLegend items={mode === 'monthly'
+        ? [{ label: 'Monthly values', color: 'var(--ink)', line: 'solid' }, { label: 'Average yearly cycle', color: 'var(--copper)', line: 'solid' }]
+        : [{ label: 'Deseasonalised anomalies', color: 'var(--ink)', line: 'solid' }]} />
+      <div ref={ref} className="chart" role="img"
+        aria-label={mode === 'monthly'
+          ? `Raw monthly values for ${regionName} with the average yearly cycle, in ${units}.`
+          : `Monthly anomalies for ${regionName} with the yearly cycle removed, in ${units}.`} />
       <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
         {mode === 'monthly'
-          ? `Raw monthly values for ${regionName}. The thick amber line is the average yearly cycle — the seasonal drumbeat that hides longer trends. Compare the monsoon swing in the raw curve with the slow trend hiding underneath.`
+          ? `Raw monthly values for ${regionName}. The thick copper line is the average yearly cycle — the seasonal drumbeat that hides longer trends. Compare the monsoon swing in the raw curve with the slow trend hiding underneath.`
           : 'Same months, yearly cycle removed: each point is that month minus its own long-term average. Now the slow trend and the unusual years stand out.'}
       </p>
     </div>

@@ -29,3 +29,4 @@ tests/parity/parity_ts.json
 
 # Internal docs (kept local)
 docs/
+design/

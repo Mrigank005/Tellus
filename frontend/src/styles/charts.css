@@ -1,0 +1,112 @@
+/* charts styles: owned by the charts agent. Use tokens from styles.css only. */
+
+/* ---------- chart frames ---------- */
+.chart, .chart-lg { min-width: 0; max-width: 100%; }
+.chart canvas, .chart-lg canvas { max-width: 100%; }
+
+/* ---------- analysis panels (cross-check, GPCP, sensitivity) ---------- */
+.xpanel { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.xpanel:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.xpanel-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; margin-bottom: 8px; }
+.xpanel-head h3 { font: 700 1.0625rem/1.3 var(--f-body); margin: 0; max-width: 62ch; }
+.xpanel-sources { display: flex; flex-wrap: wrap; gap: 6px; }
+.xpanel .source { max-width: 100%; }
+.xpanel .note-line { margin: 10px 0 0; }
+
+/* ledger rows: one ruled row per record */
+.xledger { margin: 10px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.xrow {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 4px 12px;
+  padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: .9375rem;
+}
+.xrow:last-child { border-bottom: 1px solid var(--line); }
+.xkey { display: block; min-width: 0; color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+.xkey small { display: block; font-weight: 400; color: var(--ink-faint); font-size: .8125rem; }
+.xval { font: 600 .9375rem var(--f-data); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.xval small { font-weight: 400; color: var(--ink-faint); font-size: .8125rem; }
+.xval.up { color: var(--ember); }
+.xval.down { color: var(--tide); }
+.xrow .stamp { font-size: .6875rem; padding: 4px 9px 4px 8px; transform: none; }
+@media (max-width: 560px) {
+  .xrow { grid-template-columns: auto minmax(0, 1fr); }
+  .xrow .xval { grid-column: 2; text-align: left; }
+  .xrow .stamp { grid-column: 2; justify-self: start; }
+}
+
+/* series swatches (line + dot, matching the chart marks) */
+.xsw { display: inline-block; width: 26px; height: 10px; position: relative; flex-shrink: 0; }
+.xsw::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: var(--sw, var(--ink)); }
+.xsw::after {
+  content: ""; position: absolute; left: 9px; top: 0; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--paper-raised); border: 1.5px solid var(--sw, var(--ink));
+}
+.xsw.diamond::after { border-radius: 1px; transform: rotate(45deg) scale(.85); }
+.xsw.ink { --sw: var(--ink); }
+.xsw.leaf { --sw: var(--leaf); }
+
+/* verdict line under a comparison: stamp + sentence */
+.verdict { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 14px; margin-top: 12px; }
+.verdict .stamp { flex-shrink: 0; margin-top: 2px; }
+.verdict > p, .verdict > .divergebox { flex: 1 1 260px; min-width: 0; margin: 0; }
+
+/* ---------- window heat map ---------- */
+.heat-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 14px; margin: 4px 0 10px; }
+.heat-head .stamp { flex-shrink: 0; margin-top: 1px; }
+.heat-sentence { flex: 1 1 260px; min-width: 0; font-size: .9375rem; color: var(--ink); }
+.heat-chart { max-width: 100%; }
+.heat-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 6px 0 10px; font-size: .8125rem; color: var(--ink-soft); }
+.heat-legend .scale-bar { flex: 0 1 220px; min-width: 120px; }
+.heat-legend .num { font-size: .8125rem; color: var(--ink-faint); }
+.heat-key { display: inline-flex; align-items: center; gap: 6px; }
+.heat-swatch { width: 18px; height: 12px; border: 1px solid var(--line); background-color: color-mix(in oklab, var(--d-8) 40%, var(--paper-raised)); }
+.heat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); border: 1px solid var(--paper-raised); }
+.heat-outline { width: 14px; height: 12px; border: 3px solid var(--ink); }
+
+/* ---------- sensitivity: seasons x standard windows ---------- */
+.sens-intro { margin: 0 0 10px; }
+.sens-intro b { color: var(--ink); }
+.sens-grid { display: grid; gap: 6px; margin-top: 6px; }
+.sens-colhead, .sens-rowhead { font: 600 .8125rem var(--f-body); color: var(--ink-faint); align-self: end; padding: 0 2px 2px; min-width: 0; }
+.sens-rowhead { align-self: center; color: var(--ink-soft); overflow-wrap: anywhere; }
+.sens-cell {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; text-align: left;
+  padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink);
+  font: inherit; cursor: pointer;
+  transition: border-color var(--dur-ui) ease, background-color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out);
+}
+.sens-cell:hover { border-color: var(--copper); }
+.sens-cell:active { transform: scale(.98); }
+.sens-cell[aria-pressed="true"] { border-color: var(--copper); background: var(--sun-soft); box-shadow: inset 0 0 0 1px var(--copper); }
+.sens-cell .stamp { font-size: .625rem; padding: 3px 7px 3px 6px; transform: none; gap: 4px; max-width: 100%; white-space: normal; }
+.sens-cell .sv { font: 600 .8125rem var(--f-data); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sens-cell .sv.up { color: var(--ember); }
+.sens-cell .sv.down { color: var(--tide); }
+.sens-cell .sl { font: 400 .75rem var(--f-data); font-variant-numeric: tabular-nums; color: var(--ink-faint); overflow-wrap: anywhere; }
+.sens-cell.insufficient { background-image: repeating-linear-gradient(45deg, transparent 0 4px, var(--hatch-ink) 4px 5px); }
+.sens-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; font-size: .8125rem; color: var(--ink-soft); }
+@media (max-width: 560px) {
+  .sens-cell { padding: 6px; }
+  .sens-cell .sv, .sens-cell .sl { font-size: .6875rem; }
+}
+.xpanel.flush { margin-top: 0; padding-top: 0; border-top: 0; }
+
+/* ---------- chart legend (HTML, replaces the canvas legend) ---------- */
+.clegend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 6px; padding: 0; list-style: none; font-size: .8125rem; color: var(--ink-soft); }
+.clegend li { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.clegend .k { position: relative; width: 24px; height: 10px; flex-shrink: 0; }
+.clegend .k::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; border-top: 2px solid var(--c); }
+.clegend .k.l-dashed::before { border-top-style: dashed; }
+.clegend .k.l-none::before { display: none; }
+.clegend .k::after { content: ""; position: absolute; left: 8px; top: 0; width: 8px; height: 8px; border: 1.5px solid var(--c); background: var(--paper-raised); display: none; }
+.clegend .k.d-circle::after { display: block; border-radius: 50%; }
+.clegend .k.d-diamond::after { display: block; border-radius: 1px; transform: rotate(45deg) scale(.85); }
+.clegend .k.band { height: 10px; background: color-mix(in oklab, var(--c) 22%, transparent); border: 1px solid color-mix(in oklab, var(--c) 40%, transparent); border-radius: 2px; }
+.clegend .k.band::before { display: none; }
+.xpanel-head .seg { max-width: 100%; }
+@media (max-width: 560px) {
+  .xpanel-head .seg { border-radius: 22px; width: 100%; }
+  .xpanel-head .seg button { flex: 1 1 auto; border-radius: 18px; }
+}
+
+/* compare mode: each place drawn against its own baseline */
+.trend-baseline-note { margin: 6px 0 0; }

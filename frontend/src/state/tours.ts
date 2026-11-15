@@ -57,7 +57,7 @@ export const TOURS: Record<string, Tour> = {
         }),
       },
       {
-        caption: 'Open the "Time series" tab below the map — the Model vs observed panel compares MERRA-2 (blue) with what satellites and rain gauges actually measured (green).',
+        caption: 'Open the "Time series" tab below the map — the Model vs observed panel compares MERRA-2 (the dark line) with what satellites and rain gauges actually measured (the green line).',
       },
       {
         caption: 'They disagree: the model says +136 mm per decade; observations say about −5. When that happens, the observed record is the reference for "what fell".',

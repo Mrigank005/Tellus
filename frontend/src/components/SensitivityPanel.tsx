@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { Catalog, VariableMeta } from '../engine/loader'
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import type { Catalog, MissionVariable, VariableMeta } from '../engine/loader'
 import { getSeriesEntry, loadMissions, loadPresets } from '../engine/loader'
 import { regionAnalysis, type AnalysisConfig } from '../engine/analysis'
 import type { Summarized } from '../engine/stats'
@@ -7,6 +7,7 @@ import { fetchLiveMonthly, liveSeason, peekLive, type BBox } from '../engine/pow
 import { regionSeries } from '../engine/geography'
 import { useStore } from '../state/store'
 import WindowHeatmap from './WindowHeatmap'
+import { Icon } from './Icon'
 
 interface Source { years: number[]; values: (number | null)[]; nCells: number }
 
@@ -99,20 +100,31 @@ export default function SensitivityPanel({ cat, variable, regionId, customPolygo
   const seasonSource = sources?.[store.season] ?? null
   const winMeta = cat.windows.find((w) => w.id === store.windowId)
 
+  const mv = variable as MissionVariable
+  const sourceText = regionId === 'custom' ? 'NASA POWER · live fetch'
+    : mv.instrument ? mv.instrument : 'NASA POWER · MERRA-2 reanalysis'
+  const winText = (w: { id: string; start: number; end: number }) =>
+    w.id === 'full' ? `${w.start}–${w.end}` : w.id === 'w30' ? '30 years' : '20 years'
+
   return (
-    <div>
-      <div className="seg no-print" style={{ marginBottom: 10 }}>
-        <button className={view === 'windows' ? 'on' : ''} onClick={() => setView('windows')}>
-          Start × end year windows
-        </button>
-        <button className={view === 'seasons' ? 'on' : ''} onClick={() => setView('seasons')}>
-          Seasons × standard windows
-        </button>
+    <div className="xpanel flush">
+      <div className="xpanel-head">
+        <div className="seg no-print" role="group" aria-label="Sensitivity view">
+          <button aria-pressed={view === 'windows'} onClick={() => setView('windows')}>
+            Start × end year windows
+          </button>
+          <button aria-pressed={view === 'seasons'} onClick={() => setView('seasons')}>
+            Seasons × standard windows
+          </button>
+        </div>
+        <div className="xpanel-sources">
+          <span className="source"><Icon name={mv.source_type === 'mission' ? 'sat' : 'rings'} />{sourceText}</span>
+        </div>
       </div>
 
-      <p className="muted small">
-        Sensitivity to analysis choices for <b style={{ color: 'var(--text)' }}>{variable.short_name}</b> in{' '}
-        <b style={{ color: 'var(--text)' }}>{regionName}</b>
+      <p className="muted small sens-intro">
+        Sensitivity to analysis choices for <b>{variable.short_name}</b> in{' '}
+        <b>{regionName}</b>
         {view === 'windows'
           ? <> ({cat.seasons[store.season].label}): the same test run on every window of {cfg.minYears}+ years. A
             story that holds across nearly all of them is robust; one that appears only for particular dates
@@ -132,56 +144,59 @@ export default function SensitivityPanel({ cat, variable, regionId, customPolygo
       )}
 
       {view === 'seasons' && table && (
-        <div className="sensgrid" style={{ gridTemplateColumns: `repeat(${cat.windows.length}, 1fr)` }}>
-          {Object.keys(cat.seasons).map((season) => (
-            cat.windows.map((w) => {
-              const r = table[`${w.id}|${season}`]
-              if (!r) return null
-              const lt = LABEL_TEXT_CLASS[r.label] ?? 'pill-none'
-              const dec = r.senSlope !== undefined ? r.senSlope * 10 : NaN
-              return (
-                <div key={`${w.id}|${season}`} className="senscell"
-                  style={{ cursor: 'pointer', borderColor: w.id === store.windowId && season === store.season ? 'var(--accent)' : undefined }}
-                  onClick={() => { store.setWindow(w.id); store.setSeason(season) }}>
-                  <div className="sl">{cat.seasons[season].label.split(' (')[0]} · {w.id === 'full' ? `${w.start}–${w.end}` : w.id === 'w30' ? '30 yr' : '20 yr'}</div>
-                  <div className={`pill ${lt}`} style={{ marginTop: 4 }}>{shortLabel(r.label)}</div>
-                  <div className="sv" style={{ marginTop: 5, color: signColor(dec) }}>
-                    {Number.isFinite(dec) ? `${dec >= 0 ? '+' : ''}${dec.toFixed(2)} ${variable.trend_units}` : '—'}
-                  </div>
-                  <div className="sl">
-                    {r.ciLow !== undefined && Number.isFinite(r.ciLow)
-                      ? `CI ${(r.ciLow * 10).toFixed(2)} … ${(r.ciHigh! * 10).toFixed(2)}`
-                      : `n=${r.n}`}
-                  </div>
-                </div>
-              )
-            })
-          ))}
-        </div>
+        <>
+          <div className="sens-grid" style={{ gridTemplateColumns: `minmax(52px, .55fr) repeat(${cat.windows.length}, minmax(0, 1fr))` }}>
+            <span />
+            {cat.windows.map((w) => <span key={w.id} className="sens-colhead">{winText(w)}</span>)}
+            {Object.keys(cat.seasons).map((season) => (
+              seasonRow(season)
+            ))}
+          </div>
+          <p className="sens-legend">
+            <span>Number colour: ember = rising, tide = falling.</span>
+            <span>Highlighted cell = the window and season now chosen in the workspace.</span>
+          </p>
+        </>
       )}
     </div>
   )
-}
 
-const LABEL_TEXT_CLASS: Record<string, string> = {
-  'detected-increase': 'pill-increase',
-  'detected-decrease': 'pill-decrease',
-  'no-detected-trend': 'pill-none',
-  'insufficient-data': 'pill-insufficient',
-}
-
-function shortLabel(l: string): string {
-  const m: Record<string, string> = {
-    'detected-increase': '↑ increase',
-    'detected-decrease': '↓ decrease',
-    'no-detected-trend': '· no trend',
-    'insufficient-data': 'insufficient',
+  function seasonRow(season: string) {
+    return (
+      <Fragment key={season}>
+        <span className="sens-rowhead">{cat.seasons[season].label.split(' (')[0]}</span>
+        {cat.windows.map((w) => {
+          const r = table![`${w.id}|${season}`]
+          if (!r) return <span key={w.id} />
+          const stamp = STAMP[r.label] ?? STAMP['no-detected-trend']
+          const dec = r.senSlope !== undefined ? r.senSlope * 10 : NaN
+          const on = w.id === store.windowId && season === store.season
+          const dir = !Number.isFinite(dec) || Math.abs(dec) < 1e-12 ? '' : dec > 0 ? 'up' : 'down'
+          return (
+            <button key={w.id} type="button" aria-pressed={on}
+              className={`sens-cell ${r.label === 'insufficient-data' ? 'insufficient' : ''}`}
+              aria-label={`${cat.seasons[season].label}, ${winText(w)}: ${stamp.text}`}
+              onClick={() => { store.setWindow(w.id); store.setSeason(season) }}>
+              <span className={`stamp ${stamp.cls}`}>{stamp.text}</span>
+              <span className={`sv ${dir}`}>
+                {Number.isFinite(dec) ? `${dec >= 0 ? '+' : ''}${dec.toFixed(2)} ${variable.trend_units}` : '—'}
+              </span>
+              <span className="sl">
+                {r.ciLow !== undefined && Number.isFinite(r.ciLow)
+                  ? `CI ${(r.ciLow * 10).toFixed(2)} … ${(r.ciHigh! * 10).toFixed(2)}`
+                  : `n=${r.n}`}
+              </span>
+            </button>
+          )
+        })}
+      </Fragment>
+    )
   }
-  return m[l] ?? l
 }
 
-function signColor(v: number): string {
-  if (!Number.isFinite(v)) return 'var(--muted)'
-  if (Math.abs(v) < 1e-12) return 'var(--muted)'
-  return v > 0 ? '#ff9d85' : '#8db9ff'
+const STAMP: Record<string, { cls: string; text: string }> = {
+  'detected-increase': { cls: 'up', text: 'Increase' },
+  'detected-decrease': { cls: 'down', text: 'Decrease' },
+  'no-detected-trend': { cls: 'none', text: 'No trend' },
+  'insufficient-data': { cls: 'na', text: 'Too short' },
 }

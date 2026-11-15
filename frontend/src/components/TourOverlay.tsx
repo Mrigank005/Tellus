@@ -1,6 +1,46 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../state/store'
-import { TOURS } from '../state/tours'
+import { TOURS, type TourStep } from '../state/tours'
+import { Icon } from './Icon'
+
+/** A tour step may name the part of the page it is talking about (a CSS selector). */
+type Step = TourStep & { target?: string }
+
+/** A leaf/sun ring drawn around the element a step points at. */
+function TargetRing({ selector }: { selector?: string }) {
+  const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
+
+  useEffect(() => {
+    if (!selector) { setBox(null); return }
+    let raf = 0
+    let scrolled = false
+    const measure = () => {
+      const el = document.querySelector(selector)
+      if (!el) { setBox(null); return }
+      if (!scrolled) {
+        scrolled = true
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
+      }
+      const r = el.getBoundingClientRect()
+      setBox((b) => (b && b.top === r.top && b.left === r.left && b.width === r.width && b.height === r.height
+        ? b : { top: r.top, left: r.left, width: r.width, height: r.height }))
+    }
+    const tick = () => { measure(); raf = window.requestAnimationFrame(tick) }
+    tick()
+    return () => window.cancelAnimationFrame(raf)
+  }, [selector])
+
+  if (!box) return null
+  const pad = 6
+  return (
+    <div
+      className="tour-ring no-print"
+      aria-hidden="true"
+      style={{ top: box.top - pad, left: box.left - pad, width: box.width + pad * 2, height: box.height + pad * 2 }}
+    />
+  )
+}
 
 /**
  * S4 — guided, watchable demos. A tour is a list of captioned steps; each
@@ -36,7 +76,16 @@ export default function TourOverlay() {
     return () => { if (timer.current) window.clearTimeout(timer.current) }
   }, [tour, step, playing])
 
+  // Escape closes the tour from anywhere on the page
+  useEffect(() => {
+    if (!tour) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setTour(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [tour, setTour])
+
   if (!tour) return null
+  const current = tour.steps[step] as Step
   const isLast = step >= tour.steps.length - 1
 
   function go(next: number) {
@@ -46,41 +95,48 @@ export default function TourOverlay() {
     tour!.steps[clamped]?.apply?.()
   }
 
+  const pct = ((step + 1) / tour.steps.length) * 100
+
   return (
-    <div
-      className="no-print"
-      style={{
-        position: 'fixed', left: '50%', transform: 'translateX(-50%)',
-        bottom: 22, zIndex: 100, width: 'min(680px, calc(100vw - 32px))',
-        background: 'rgba(14,21,36,0.97)', border: '1px solid var(--accent)',
-        borderRadius: 14, padding: '14px 18px', boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
-      }}
-      role="dialog"
-      onKeyDown={(e) => { if (e.key === 'Escape') setTour(null) }}
-      tabIndex={-1}
-    >
-      <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-        <b style={{ color: 'var(--accent-2)' }}>▶ {tour.title}</b>
-        <span className="muted small">step {step + 1}/{tour.steps.length}</span>
-      </div>
-      <p style={{ margin: '8px 0 10px' }}>{tour.steps[step].caption}</p>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <div className="row" style={{ gap: 6 }}>
-          <button className="ghost" onClick={() => go(step - 1)} disabled={step === 0}>←</button>
-          {!playing && !isLast && (
-            <button className="ghost" onClick={() => setPlaying(true)}>▶ Play</button>
-          )}
-          {playing && <button className="ghost" onClick={() => setPlaying(false)}>❚❚ Pause</button>}
+    <>
+      <TargetRing selector={current.target} />
+      <div className="tour no-print" role="dialog" aria-label={`Guided tour: ${tour.title}`}>
+        <div className="tour-head">
+          <span className="tour-count mono" aria-label={`Step ${step + 1} of ${tour.steps.length}`}>
+            {step + 1} / {tour.steps.length}
+          </span>
+          <button type="button" className="tour-x" onClick={() => setTour(null)} aria-label="Close the tour">
+            <Icon name="x" />
+          </button>
         </div>
-        <div className="row" style={{ gap: 6 }}>
-          {isLast ? (
-            <button className="primary" onClick={() => setTour(null)}>Done — my turn</button>
-          ) : (
-            <button className="ghost" onClick={() => go(step + 1)}>Next →</button>
-          )}
-          <button className="ghost" onClick={() => setTour(null)}>Exit</button>
+        <h2 className="tour-title">{tour.title}</h2>
+        <div className="tour-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
+        <p className="tour-caption" aria-live="polite">{current.caption}</p>
+        <div className="tour-controls">
+          <div className="tour-side">
+            <button type="button" className="btn ghost sm" onClick={() => go(step - 1)} disabled={step === 0}>
+              <Icon name="arrow" className="flip" /> Back
+            </button>
+            {!playing && !isLast && (
+              <button type="button" className="btn ghost sm" onClick={() => setPlaying(true)}>Play</button>
+            )}
+            {playing && (
+              <button type="button" className="btn ghost sm" onClick={() => setPlaying(false)}>Pause</button>
+            )}
+          </div>
+          <div className="tour-side">
+            {isLast ? (
+              <button type="button" className="btn sm" onClick={() => setTour(null)}>
+                Done, my turn <Icon name="arrow" className="arrow" />
+              </button>
+            ) : (
+              <button type="button" className="btn sm" onClick={() => go(step + 1)}>
+                Next <Icon name="arrow" className="arrow" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

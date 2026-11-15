@@ -36,7 +36,7 @@ export const useStore = create<Store>((set) => ({
   variableId: 'T2M',
   season: 'annual',
   windowId: 'full',
-  regionId: 'himalaya',
+  regionId: 'arctic',
   customPolygon: null,
   compareRegionId: null,
   drawing: false,

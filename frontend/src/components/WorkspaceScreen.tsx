@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state/store'
+import { place, seasonPhrase, spanPhrase } from '../state/places'
+import { useTheme } from '../state/theme'
+import { tokens } from '../styles/tokens'
+import { Icon, type IconName } from './Icon'
 import {
   loadCatalog, loadGrid, loadPresets, loadGpcp, loadTrendPack,
   loadMissions, loadMissionVariables, getSeriesEntry,
@@ -23,20 +27,26 @@ import {
 import { regionRelation } from '../engine/regionOverlap'
 import { fetchLiveMonthly, liveSeason, type BBox } from '../engine/powerLive'
 import { regionSeries } from '../engine/geography'
-import MapCanvas, { legendGradient, slopeVmax } from './MapCanvas'
+import MapCanvas, { MapLegend, slopeVmax, type MapHover } from './MapCanvas'
 import TrendChart from './TrendChart'
 import SensitivityPanel from './SensitivityPanel'
 import ExportPanel from './ExportPanel'
 import GpcpPanel from './GpcpPanel'
 import CrossCheckPanel from './CrossCheckPanel'
 import AnomalyPanel from './AnomalyPanel'
+import StoryPanel from './journey/StoryPanel'
+import RigorPanel from './journey/RigorPanel'
+import { sourceFor, useJourneyVerdict } from './journey/StoryVerdict'
 
-const LABEL_TEXT: Record<string, { text: string; cls: string }> = {
-  'detected-increase': { text: 'Statistically detected increase', cls: 'pill-increase' },
-  'detected-decrease': { text: 'Statistically detected decrease', cls: 'pill-decrease' },
-  'no-detected-trend': { text: 'No statistically detected trend', cls: 'pill-none' },
-  'insufficient-data': { text: 'Insufficient data', cls: 'pill-insufficient' },
+/** Verdict stamps: shape plus words, never colour alone. `title` carries the full phrase. */
+const STAMP: Record<string, { text: string; cls: string; icon: IconName; title: string }> = {
+  'detected-increase': { text: 'Detected increase', cls: 'up', icon: 'check', title: 'Statistically detected increase' },
+  'detected-decrease': { text: 'Detected decrease', cls: 'down', icon: 'check', title: 'Statistically detected decrease' },
+  'no-detected-trend': { text: 'No clear trend', cls: 'none', icon: 'tilde', title: 'No statistically detected trend' },
+  'insufficient-data': { text: 'Too little data', cls: 'na', icon: 'x', title: 'Insufficient data' },
 }
+
+type Tab = 'story' | 'real' | 'series' | 'sensitivity' | 'exploratory' | 'methods' | 'export'
 
 function bboxOf(polygon: number[][]): BBox {
   let lonMin = 180, lonMax = -180, latMin = 90, latMax = -90
@@ -49,6 +59,14 @@ function bboxOf(polygon: number[][]): BBox {
 
 export default function WorkspaceScreen() {
   const store = useStore()
+  const theme = useTheme((s) => s.theme)
+  const tk = tokens(theme)
+  // stable, so the map's drawing handlers are not re-bound on every hover update
+  const onDrawn = useCallback((poly: number[][]) => {
+    const st = useStore.getState()
+    st.setRegion('custom', poly)
+    st.setDrawing(false)
+  }, [])
   const [cat, setCat] = useState<Catalog | null>(null)
   const [grid, setGrid] = useState<Grid | null>(null)
   const [pack, setPack] = useState<TrendPack | null>(null)
@@ -63,9 +81,14 @@ export default function WorkspaceScreen() {
   const [missionVars, setMissionVars] = useState<MissionVariable[]>([])
   const [busy, setBusy] = useState(true)
   const [liveStatus, setLiveStatus] = useState<string | null>(null)
-  const [hover, setHover] = useState<{ lon: number; lat: number; pixelIdx: number } | null>(null)
+  const [hover, setHover] = useState<MapHover | null>(null)
   const [showSignificance, setShowSignificance] = useState(true)
-  const [tab, setTab] = useState<'series' | 'sensitivity' | 'exploratory' | 'methods' | 'export'>('series')
+  // a comparison is best read on the shared time-series chart; one place opens on its story
+  const [tab, setTab] = useState<Tab>(() => (useStore.getState().compareRegionId ? 'series' : 'story'))
+  const compareId = store.compareRegionId
+  useEffect(() => { if (compareId) setTab('series') }, [compareId])
+  // the same verdict the journey reads, so the story and the shuffle test always agree with it
+  const { v: storyV, pending: storyPending } = useJourneyVerdict()
   const [contrasts, setContrasts] = useState<ContrastPair[] | null>(null)
   const [monthlyMode, setMonthlyMode] = useState<'annual' | 'monthly' | 'deseasonalised'>('annual')
   const [monthlyPresets, setMonthlyPresets] = useState<MonthlyPresets | null>(null)
@@ -281,139 +304,178 @@ export default function WorkspaceScreen() {
   let vmaxPerDecade = 0
   if (pack) vmaxPerDecade = slopeVmax(pack.slope) * 10
 
+  const seasonShort = (id: string) => seasonPhrase(id, cat.seasons[id]?.label)
+  const windowShort = (id: string) => spanPhrase(cat.windows.find((w) => w.id === id))
+  const regionName = store.regionId === 'custom' ? 'Custom region' : region?.name ?? 'this region'
+  const regionMid = place(store.regionId, region?.name).mid
+  const lowerFirst = (s: string) => (/^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s)
+  const isMissionOpt = (v: VariableMeta) => (v as VariableMeta & { source_type?: string }).source_type === 'mission'
+  const instrument = (variable as VariableMeta & { instrument?: string }).instrument
+  const stamp = summary ? STAMP[summary.label] : undefined
+  const hasSlope = !!summary && summary.label !== LABELS.insufficientData && 'senSlope' in summary
+  const sourceBadge = store.regionId === 'custom' && !isMissionVar
+    ? 'NASA POWER · live fetch'
+    : isMissionVar ? (instrument ?? 'Satellite record') : 'NASA POWER · MERRA-2'
+
+  const tabLabels: Record<Tab, string> = {
+    story: 'The story', real: 'Is it real?',
+    series: 'Time series', sensitivity: 'Sensitivity', exploratory: 'Exploratory events',
+    methods: 'Methods & data', export: 'Export evidence',
+  }
+  const tabOrder = Object.keys(tabLabels) as Tab[]
+  function onTabKey(e: React.KeyboardEvent, t: Tab) {
+    const dir = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+    if (!dir) return
+    e.preventDefault()
+    const next = tabOrder[(tabOrder.indexOf(t) + dir + tabOrder.length) % tabOrder.length]
+    setTab(next)
+    document.getElementById(`desk-tab-${next}`)?.focus()
+  }
+
   return (
-    <>
-      {/* control strip */}
-      <div className="row" style={{ padding: '12px 18px 0', gap: 8 }}>
-        <div className="seg">
-          {allVars.map((v) => (
-            <button key={v.id} className={v.id === store.variableId ? 'on' : ''}
-              onClick={() => store.setVariable(v.id)} title={v.long_name}>
-              {v.short_name}{(v as VariableMeta & { source_type?: string }).source_type === 'mission' ? ' ⚛' : ''}
-            </button>
-          ))}
-        </div>
-        <div className="seg">
-          {Object.entries(cat.seasons).map(([id, s]) => (
-            <button key={id} className={id === store.season ? 'on' : ''}
-              onClick={() => store.setSeason(id)}>{s.label.split(' (')[0]}</button>
-          ))}
-        </div>
-        <div className="seg">
-          {cat.windows.map((w) => (
-            <button key={w.id} className={w.id === store.windowId ? 'on' : ''}
-              onClick={() => store.setWindow(w.id)}>
-              {w.id === 'full' ? 'Full record' : w.id === 'w30' ? '30 yr' : '20 yr'}
-            </button>
-          ))}
-        </div>
-        <div className="seg">
-          <select
-            value={store.regionId}
-            onChange={(e) => store.setRegion(e.target.value)}
-            style={{ background: 'var(--panel-2)', color: 'var(--text)', border: 'none', padding: '8px 10px', fontSize: 13.5, borderRadius: 8 }}
-          >
+    <div className="desk">
+      {/* ---------------- the question ---------------- */}
+      <section className="desk-bar" aria-label="The question you are asking">
+        <div className="desk-q">
+          <span>How has</span>
+          <ChipSelect label="Variable" value={store.variableId} onChange={(v) => store.setVariable(v)}
+            display={lowerFirst(variable.short_name)}>
+            {allVars.map((v) => (
+              <option key={v.id} value={v.id} title={v.long_name}>
+                {v.short_name}{isMissionOpt(v) ? ' (satellite)' : ''}
+              </option>
+            ))}
+          </ChipSelect>
+          <span>changed in</span>
+          <ChipSelect label="Region" value={store.regionId} onChange={(v) => store.setRegion(v)}
+            display={regionMid} swatch="var(--copper)">
             {store.regionId === 'custom' && <option value="custom">Custom region</option>}
             {cat.regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
-        </div>
-        <div className="seg">
-          <select
-            value={store.compareRegionId ?? ''}
-            onChange={(e) => store.setCompare(e.target.value || null)}
-            style={{ background: 'var(--panel-2)', color: 'var(--text)', border: 'none', padding: '8px 10px', fontSize: 13.5, borderRadius: 8 }}
-          >
-            <option value="">Compare with…</option>
-            {cat.regions.filter((r) => r.id !== store.regionId).map((r) => (
-              <option key={r.id} value={r.id}>vs {r.name}</option>
+          </ChipSelect>
+          <ChipSelect label="Season" value={store.season} onChange={(v) => store.setSeason(v)}
+            display={seasonShort(store.season)}>
+            {Object.entries(cat.seasons).map(([id, s]) => (
+              <option key={id} value={id}>{seasonShort(id)}</option>
             ))}
-          </select>
+          </ChipSelect>
+          <span>over</span>
+          <ChipSelect label="Time window" value={store.windowId} onChange={(v) => store.setWindow(v)}
+            display={windowShort(store.windowId)}>
+            {cat.windows.map((w) => (
+              <option key={w.id} value={w.id}>
+                {spanPhrase(w)} ({w.start}–{w.end})
+              </option>
+            ))}
+          </ChipSelect>
+          <span>?</span>
         </div>
-        <div className="seg">
-          <button className={showSignificance ? 'on' : ''} onClick={() => setShowSignificance((v) => !v)}>
-            {showSignificance ? 'Significance shading: on' : 'Significance shading: off'}
+        <div className="desk-tools">
+          <span className="desk-cmp">
+            <span>Compare with</span>
+            <ChipSelect label="Compare with another region" value={store.compareRegionId ?? ''}
+              onChange={(v) => store.setCompare(v || null)}
+              display={cmpRegionMeta ? place(cmpRegionMeta.id, cmpRegionMeta.name).mid : 'another place'} swatch={cmpRegionMeta ? 'var(--leaf)' : undefined}>
+              <option value="">No comparison</option>
+              {cat.regions.filter((r) => r.id !== store.regionId).map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </ChipSelect>
+          </span>
+          <span className="spacer" />
+          <button className="btn ghost sm" aria-pressed={store.drawing}
+            onClick={() => store.setDrawing(!store.drawing)}>
+            <Icon name="pen" />
+            {store.drawing ? 'Click two opposite corners on the map…' : 'Draw a region'}
+          </button>
+          <button className="btn ghost sm" onClick={() => store.go('configure')}>
+            Change the question
           </button>
         </div>
-        <div className="spacer" style={{ flex: 1 }} />
-        <button className={`ghost ${store.drawing ? 'on' : ''}`} onClick={() => store.setDrawing(!store.drawing)}>
-          {store.drawing ? 'Click two opposite corners on the map…' : '✏ Draw custom region'}
-        </button>
-      </div>
+      </section>
 
-      <div className="workspace">
+      <div className="desk-grid">
         {/* ---------------- map ---------------- */}
-        <div className="mapwrap">
-          {busy && (
-            <div className="loading" style={{ position: 'absolute', inset: 0, zIndex: 40, background: 'rgba(7,11,20,0.55)' }}>
-              <div className="spinner" /> Loading trend map…
-            </div>
-          )}
-          {liveStatus && (
-            <div className="loading" style={{ position: 'absolute', inset: 0, zIndex: 41, background: 'rgba(7,11,20,0.65)' }}>
-              <div className="spinner" /> {liveStatus}
-            </div>
-          )}
-          <MapCanvas
-            grid={grid ?? { lats: new Float64Array(0), lons: new Float64Array(0) }}
-            domain={cat.domain}
-            trends={pack}
-            showSignificance={showSignificance}
-            regionA={polygon}
-            regionB={cmpRegionMeta?.polygon ?? null}
-            drawing={store.drawing}
-            onDrawn={(poly) => { store.setRegion('custom', poly); store.setDrawing(false) }}
-            onHover={setHover}
-            trendUnits={variable.trend_units}
-            regionVerdicts={regionVerdicts}
-          />
-          {isMissionVar ? (
-            <div className="maplegend">
-              <b>{variable.trend_units}</b>
-              <div className="lrow"><span className="sw" style={{ background: '#e1694b' }} /> detected increase</div>
-              <div className="lrow"><span className="sw" style={{ background: '#4f7fd8' }} /> detected decrease</div>
-              <div className="lrow"><span className="sw" style={{ background: '#3a465e' }} /> no detected trend</div>
-              <div className="lrow muted" style={{ marginTop: 6 }}>Regional results — no per-pixel map for
-                this variable. Regions with too little data are drawn nearly black.</div>
-            </div>
-          ) : (
-            legendGradient(vmaxPerDecade || 1, variable.trend_units)
-          )}
-          <HoverTooltip hover={hover} trends={pack} />
-        </div>
+        <section className="desk-map" aria-label="Map of trends">
+          <div className="desk-stage">
+            <MapCanvas
+              grid={grid ?? { lats: new Float64Array(0), lons: new Float64Array(0) }}
+              domain={cat.domain}
+              trends={pack}
+              showSignificance={showSignificance}
+              regionA={polygon}
+              regionB={cmpRegionMeta?.polygon ?? null}
+              drawing={store.drawing}
+              onDrawn={onDrawn}
+              onHover={setHover}
+              trendUnits={variable.trend_units}
+              regionVerdicts={regionVerdicts}
+            />
+            {!isMissionVar && (
+              <button className="map-tool" aria-pressed={showSignificance}
+                onClick={() => setShowSignificance((v) => !v)}>
+                Significance shading: {showSignificance ? 'on' : 'off'}
+              </button>
+            )}
+            {store.drawing && (
+              <div className="map-hint" role="status">Click two opposite corners, or drag a box.</div>
+            )}
+            {busy && (
+              <div className="desk-loading" role="status">
+                <div className="spinner" /> Loading trend map…
+              </div>
+            )}
+            {liveStatus && (
+              <div className="desk-loading" role="status">
+                <div className="spinner" /> {liveStatus}
+              </div>
+            )}
+            <HoverTooltip hover={hover} trends={pack} />
+          </div>
+          <MapLegend vmaxPerDecade={vmaxPerDecade || 1} trendUnits={variable.trend_units}
+            showSignificance={showSignificance} regionLevel={isMissionVar} />
+        </section>
 
-        {/* ---------------- side panel ---------------- */}
-        <div className="sidepanel">
-          <div className="verdict">
-            <div className="vl">Verdict · {store.regionId === 'custom' ? 'Custom region (live NASA fetch)' : region?.name}</div>
+        {/* ---------------- side column ---------------- */}
+        <aside className="desk-side" aria-label="Verdict and notes">
+          <article className="specimen" aria-labelledby="sp-place">
+            <Icon name="pin" className="pin" />
+            <h2 id="sp-place">{regionName}</h2>
+            <div className="what">
+              {variable.long_name} · {cat.seasons[store.season].label.split(' (')[0]} · {windowMeta.label}
+            </div>
             {summary ? (
               <>
-                <div className="headline">
-                  {LABEL_TEXT[summary.label]?.text ?? summary.label}
+                <div className="sp-stamp">
+                  <span className={`stamp ${stamp?.cls ?? 'none'}`} title={stamp?.title}>
+                    <Icon name={stamp?.icon ?? 'tilde'} /><span>{stamp?.text ?? summary.label}</span>
+                  </span>
                 </div>
+                {hasSlope && (
+                  <>
+                    <div className="big">
+                      {signed(slopeDec, 2)}<small>{variable.trend_units}</small>
+                    </div>
+                    <div className="ci">
+                      Likely between <span className="num">{signed(ciLowDec, 2)}</span> and{' '}
+                      <span className="num">{signed(ciHighDec, 2)}</span> (95% interval)
+                    </div>
+                  </>
+                )}
                 {analysis && 'senSlope' in summary && (
-                  <p className="small" style={{ margin: '2px 0 0', color: 'var(--text)' }}>
+                  <p className="plain">
                     {plainVerdict(summary as SummT, variable.trend_units, variable.higher_means, analysis.years)}
                   </p>
                 )}
                 {diag && diag.em.status !== 'insufficient-data' && summary.label !== LABELS.insufficientData && (
-                  <p className="small" style={{ margin: '6px 0 0', color: 'var(--text)' }}>
-                    {diag.emSentence}
-                  </p>
+                  <p className="sp-p">{diag.emSentence}</p>
                 )}
                 {horizon && (
-                  <div className="cautionbox" style={{ marginTop: 10 }}>
+                  <div className="cautionbox">
                     <b>Not significant — yet?</b> {plainHorizon(horizon.moreYears, horizon.cappedAt)}
                   </div>
                 )}
-                {summary.label !== LABELS.insufficientData && 'senSlope' in summary && (
-                  <div className="num">
-                    {slopeDec >= 0 ? '+' : ''}{slopeDec.toFixed(2)} {variable.trend_units}
-                    <span className="muted"> (95% CI {ciLowDec >= 0 ? '+' : ''}{ciLowDec.toFixed(2)} to{' '}
-                      {ciHighDec >= 0 ? '+' : ''}{ciHighDec.toFixed(2)})</span>
-                  </div>
-                )}
                 {naiveDiffers && (
-                  <div className="cautionbox" style={{ marginTop: 8 }}>
+                  <div className="cautionbox">
                     <b>Naive test would have called this significant.</b> Adjusting for
                     year-to-year persistence (lag-1 r ≈ {'lag1R' in (summary as object) ? ((summary as any).lag1R).toFixed(2) : '—'},
                     effective n ≈ {'nEff' in (summary as object) ? Math.round((summary as any).nEff) : '—'}) moves the
@@ -421,69 +483,101 @@ export default function WorkspaceScreen() {
                   </div>
                 )}
                 {summary.label !== LABELS.insufficientData && 'caution' in summary && summary.caution && (
-                  <div className="cautionbox" style={{ marginTop: 10 }}>
+                  <div className="cautionbox">
                     <b>Interpretation caution.</b> {summary.cautionReasons.join('; ')}.
                   </div>
                 )}
-                <details style={{ marginTop: 8 }}>
-                  <summary className="muted small" style={{ cursor: 'pointer' }}>Show the statistics</summary>
-                  <div style={{ marginTop: 6 }}>
-                  <div className="statrow"><span className="k">Mann-Kendall p (adjusted)</span>
-                    <span className="v">{'mkPAdj' in summary ? (summary as any).mkPAdj.toPrecision(3) : '—'}</span></div>
-                  <div className="statrow"><span className="k">Mann-Kendall p (naive)</span>
-                    <span className="v">{'mkP' in summary ? summary.mkP.toPrecision(3) : '—'}</span></div>
-                  <div className="statrow"><span className="k">Year-to-year persistence r</span>
-                    <span className="v">{'lag1R' in (summary as object) ? (summary as any).lag1R.toFixed(2) : '—'}</span></div>
-                  <div className="statrow"><span className="k">OLS slope (cross-check)</span>
-                    <span className="v">{'olsSlope' in summary ? ((summary.olsSlope * 10) >= 0 ? '+' : '') + (summary.olsSlope * 10).toFixed(3) + ' /dec' : '—'}</span></div>
-                  <div className="statrow"><span className="k">Valid years · cells</span>
-                    <span className="v">{summary.n} · {analysis?.series.nCells}</span></div>
-                  <div className="statrow"><span className="k">Data coverage</span>
-                    <span className="v">{(analysis ? analysis.coverage * 100 : NaN).toFixed(0)}%</span></div>
-                  {store.regionId === 'custom' && (
-                    <div className="statrow"><span className="k">Data source</span>
-                      <span className="v">live NASA POWER fetch</span></div>
+                <dl className="facts">
+                  {diag?.em.status === 'emerged' && diag.em.emergenceYear !== null && (
+                    <><dt>Clear since</dt><dd>{diag.em.emergenceYear}</dd></>
                   )}
+                  {diag?.cpVisible && diag.pt.year != null && (
+                    <><dt>Possible shift</dt><dd>around {diag.pt.year}</dd></>
+                  )}
+                  <dt>Years used</dt><dd>{summary.n}</dd>
+                  <dt>Grid cells</dt><dd>{analysis?.series.nCells ?? '—'}</dd>
+                  <dt>Data coverage</dt><dd>{(analysis ? analysis.coverage * 100 : NaN).toFixed(0)}%</dd>
+                  {store.regionId === 'custom' && (<><dt>Data source</dt><dd>live NASA POWER fetch</dd></>)}
+                </dl>
+                <details className="stats">
+                  <summary>Show the statistics</summary>
+                  <div className="statrows">
+                    <div className="statrow"><span className="k">Mann-Kendall p (adjusted)</span>
+                      <span className="v">{'mkPAdj' in summary ? (summary as any).mkPAdj.toPrecision(3) : '—'}</span></div>
+                    <div className="statrow"><span className="k">Mann-Kendall p (naive)</span>
+                      <span className="v">{'mkP' in summary ? summary.mkP.toPrecision(3) : '—'}</span></div>
+                    <div className="statrow"><span className="k">Year-to-year persistence r</span>
+                      <span className="v">{'lag1R' in (summary as object) ? (summary as any).lag1R.toFixed(2) : '—'}</span></div>
+                    <div className="statrow"><span className="k">OLS slope (cross-check)</span>
+                      <span className="v">{'olsSlope' in summary ? ((summary.olsSlope * 10) >= 0 ? '+' : '') + (summary.olsSlope * 10).toFixed(3) + ' /dec' : '—'}</span></div>
+                    <div className="statrow"><span className="k">Valid years · cells</span>
+                      <span className="v">{summary.n} · {analysis?.series.nCells}</span></div>
+                    <div className="statrow"><span className="k">Data coverage</span>
+                      <span className="v">{(analysis ? analysis.coverage * 100 : NaN).toFixed(0)}%</span></div>
+                    {store.regionId === 'custom' && (
+                      <div className="statrow"><span className="k">Data source</span>
+                        <span className="v">live NASA POWER fetch</span></div>
+                    )}
                   </div>
                 </details>
               </>
-            ) : noData
-              ? <div className="cautionbox" style={{ marginTop: 8 }}>{noData}</div>
-              : <div className="muted">Computing…</div>}
-          </div>
+            ) : noData ? (
+              <>
+                <div className="sp-stamp">
+                  <span className="stamp na"><Icon name="x" /><span>No record here</span></span>
+                </div>
+                <div className="cautionbox">{noData}</div>
+              </>
+            ) : (
+              <p className="note" role="status">Computing…</p>
+            )}
+            <div className="sp-sources">
+              {(() => {
+                const src = sourceFor(variable as Parameters<typeof sourceFor>[0])
+                return (
+                  <a className="source" href={src.url} target="_blank" rel="noopener noreferrer" title={src.title}>
+                    <Icon name="sat" />{store.regionId === 'custom' && !isMissionVar ? sourceBadge : src.label}
+                  </a>
+                )
+              })()}
+              <span className="source" title="Statistics computed on this page"><Icon name="rings" />Computed in your browser</span>
+            </div>
+          </article>
 
           {cmpSummary && compareAnalysis && (() => {
-            const nameA = store.regionId === 'custom' ? 'Custom region' : region?.name ?? 'A'
+            const nameA = regionName
             const nameB = cmpRegionMeta?.name ?? 'B'
             const rel = polygon && cmpRegionMeta
               ? regionRelation(polygon, cmpRegionMeta.polygon) : 'separate'
             const overlapping = rel !== 'separate'
             const unitsShort = variable.trend_units.replace(' per decade', '')
             return (
-              <div className="card">
-                <h3>A ↔ B comparison</h3>
-                <RegionStat name={nameA} summary={summary} variable={variable} color="#4f9cf9" />
-                <RegionStat name={nameB} summary={cmpSummary} variable={variable} color="#ffb547" />
+              <section className="desk-card" aria-labelledby="cmp-h">
+                <h3 id="cmp-h">Compared with {nameB}</h3>
+                <div className="ledger">
+                  <RegionStat name={nameA} summary={summary} variable={variable} swatch="var(--copper)" />
+                  <RegionStat name={nameB} summary={cmpSummary} variable={variable} swatch="var(--leaf)" />
+                </div>
                 {diffTest && (
-                  <div style={{ marginTop: 10 }}>
-                    <div className="headline" style={{ fontSize: 15 }}>
+                  <div className="cmp-result">
+                    <div className="cmp-head">
                       {differenceHeadline(diffTest, overlapping)}
                     </div>
                     {overlapping && diffTest.label !== 'insufficient-data' && (
-                      <div className="cautionbox" style={{ marginTop: 8 }}>
+                      <div className="cautionbox">
                         <b>These regions overlap, so the test is approximate.</b>{' '}
                         {relationText(rel, nameA, nameB)}: the two series share the same
                         grid cells, so they are not independent samples. Treat the result
                         as a rough guide, not a clean verdict.
                       </div>
                     )}
-                    <p className="small" style={{ margin: '8px 0 0', color: 'var(--text)' }}>
+                    <p className="sp-p">
                       {differenceDetail(diffTest, unitsShort)}
                     </p>
                     {diffTest.label !== 'insufficient-data' && (
-                      <details style={{ marginTop: 6 }}>
-                        <summary className="muted small" style={{ cursor: 'pointer' }}>Show the statistics</summary>
-                        <div style={{ marginTop: 6 }}>
+                      <details className="stats">
+                        <summary>Show the statistics</summary>
+                        <div className="statrows">
                           <div className="statrow"><span className="k">Slope A · B (per decade)</span>
                             <span className="v">{(diffTest.slopeA! * 10).toFixed(3)} · {(diffTest.slopeB! * 10).toFixed(3)}</span></div>
                           <div className="statrow"><span className="k">Adjusted SE A · B (per decade)</span>
@@ -494,7 +588,7 @@ export default function WorkspaceScreen() {
                             <span className="v">{diffTest.df!.toFixed(1)} · {diffTest.p!.toPrecision(3)}</span></div>
                           <div className="statrow"><span className="k">Persistence r (A · B)</span>
                             <span className="v">{diffTest.lag1RA!.toFixed(2)} · {diffTest.lag1RB!.toFixed(2)}</span></div>
-                          <p className="muted small" style={{ marginBottom: 0 }}>
+                          <p className="note">
                             OLS slopes with year-to-year-persistence-inflated standard errors,
                             on the {diffTest.n} years both series share; p from Student's t. The
                             test assumes the two regions are independent. Neighbouring regions
@@ -505,48 +599,58 @@ export default function WorkspaceScreen() {
                     )}
                   </div>
                 )}
-              </div>
+              </section>
             )
           })()}
 
           {fractions && (
-            <div className="card">
-              <h3>What fraction of Earth is changing?</h3>
+            <section className="desk-card" aria-labelledby="frac-h">
+              <h3 id="frac-h">What fraction of Earth is changing?</h3>
               <AreaBar fractions={fractions} />
-              <p className="muted small" style={{ marginBottom: 0 }}>
+              <p className="note">
                 Fractions of global map area (cos-latitude weighted) after FDR correction across{' '}
                 {pack?.nEligible.toLocaleString()} eligible cells. Same test family = one
                 variable × one map × one window × one season.
               </p>
-            </div>
+            </section>
           )}
 
-          <div className="card">
-            <h3>&#8596; Opposite trends</h3>
-            <p className="muted small" style={{ marginTop: 0 }}>
+          <section className="desk-card" aria-labelledby="opp-h">
+            <h3 id="opp-h">Opposite trends</h3>
+            <p className="note">
               One process can push a variable up in one region and down in another. Find
               the strongest preset-region pair moving in opposite directions for{' '}
               {variable.short_name} ({cat.seasons[store.season].label}, {windowMeta.label}).
             </p>
-            <button className="ghost" onClick={runContrastFinder}>Find opposite trends</button>
+            <button className="btn ghost sm" onClick={runContrastFinder}>Find opposite trends</button>
             {contrasts && contrasts.length === 0 && (
-              <p className="muted small" style={{ marginBottom: 0 }}>No pair of preset regions shows significant opposite trends for this combination.</p>
+              <p className="note" role="status">No pair of preset regions shows significant opposite trends for this combination.</p>
             )}
-            {contrasts && contrasts.map((c, i) => {
-              const name = (id: string) => cat.regions.find((r) => r.id === id)?.name ?? id
-              return (
-                <div key={i} className="senscell" style={{ marginTop: 8, cursor: 'pointer' }}
-                  onClick={() => {
-                    useStore.setState({ regionId: c.a, compareRegionId: c.b, customPolygon: null })
-                    setContrasts(null)
-                  }}>
-                  <div><b style={{ color: '#ff9d85' }}>{name(c.a)}</b> {(c.slopeA >= 0 ? '+' : '') + c.slopeA.toFixed(2)}
-                    {' vs '}<b style={{ color: '#8db9ff' }}>{name(c.b)}</b> {(c.slopeB >= 0 ? '+' : '') + c.slopeB.toFixed(2)} {variable.trend_units.replace(' per decade', '')}/dec</div>
-                  <div className="sl">both individually significant — click to open this pair</div>
-                </div>
-              )
-            })}
-          </div>
+            {contrasts && contrasts.length > 0 && (
+              <ul className="pairs">
+                {contrasts.map((c, i) => {
+                  const name = (id: string) => cat.regions.find((r) => r.id === id)?.name ?? id
+                  const cls = (x: number) => (x >= 0 ? 'up' : 'down')
+                  return (
+                    <li key={i}>
+                      <button className="pair" onClick={() => {
+                        useStore.setState({ regionId: c.a, compareRegionId: c.b, customPolygon: null })
+                        setContrasts(null)
+                      }}>
+                        <span className="pair-line">
+                          <b className={cls(c.slopeA)}>{name(c.a)}</b> <span className="num">{signed(c.slopeA, 2)}</span>
+                          {' vs '}
+                          <b className={cls(c.slopeB)}>{name(c.b)}</b> <span className="num">{signed(c.slopeB, 2)}</span>{' '}
+                          {variable.trend_units.replace(' per decade', '')}/dec
+                        </span>
+                        <span className="pair-sub">Both individually significant. Open this pair.</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
 
           {variable.known_divergence && (
             <div className="divergebox">
@@ -556,230 +660,326 @@ export default function WorkspaceScreen() {
           {variable.caution && (
             <div className="cautionbox"><b>Caution.</b> {variable.caution}</div>
           )}
-        </div>
-      </div>
+        </aside>
 
-      {/* ---------------- lower tabs ---------------- */}
-      <div className="container" style={{ paddingTop: 0 }}>
-        <div className="card">
-          <div className="tabs no-print">
-            {(['series', 'sensitivity', 'exploratory', 'methods', 'export'] as const).map((t) => (
-              <button key={t} className={`tab ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>
-                {t === 'series' ? 'Time series' : t === 'sensitivity' ? 'Sensitivity' : t === 'exploratory' ? 'Exploratory events' : t === 'methods' ? 'Methods & data' : 'Export evidence'}
+        {/* ---------------- tabs ---------------- */}
+        <section className="desk-lower" aria-label="Analysis">
+          <div className="desk-tablist no-print" role="tablist" aria-label="Analysis panels">
+            {tabOrder.map((t) => (
+              <button key={t} id={`desk-tab-${t}`} role="tab" aria-selected={tab === t}
+                aria-controls="desk-tabpanel" tabIndex={tab === t ? 0 : -1}
+                className={`desk-tab ${tab === t ? 'on' : ''}`}
+                onClick={() => setTab(t)} onKeyDown={(e) => onTabKey(e, t)}>
+                {tabLabels[t]}
               </button>
             ))}
           </div>
 
-          {tab === 'series' && analysis && (
-            <>
-              <div className="seg no-print" style={{ marginBottom: 10 }}>
-                {(['annual', 'monthly', 'deseasonalised'] as const).map((m) => (
-                  <button key={m} className={monthlyMode === m ? 'on' : ''}
-                    onClick={() => setMonthlyMode(m)}>
-                    {m === 'annual' ? 'Annual + trend' : m === 'monthly' ? 'Raw monthly' : 'Cycle removed'}
-                  </button>
-                ))}
-              </div>
-              {monthlyMode !== 'annual' && presets && !isMissionVar && store.regionId !== 'custom' && (
-                (() => {
-                  const entry = monthlyPresets?.[seriesKey]?.[store.regionId]
-                  if (!entry) return null
-                  return <MonthlyChart months={entry.months} values={entry.values}
-                    mode={monthlyMode} units={variable.units} color="#4f9cf9"
-                    regionName={region?.name ?? store.regionId} />
-                })()
-              )}
-              {monthlyMode === 'annual' && (
+          <div className="desk-tabpanel" id="desk-tabpanel" role="tabpanel" aria-labelledby={`desk-tab-${tab}`}>
+            {tab === 'story' && (
+              storyV && !storyPending && storyV.status === 'ready' ? (
+                <StoryPanel v={storyV} />
+              ) : storyV && !storyPending ? (
+                <p className="note">
+                  {storyV.status === 'custom'
+                    ? 'The story reads the stored record of the preset places. For a region you draw, the verdict beside the map and the Time series tab show the same tests on the live NASA POWER data.'
+                    : storyV.message ?? 'There is no record to tell a story from for this question.'}
+                </p>
+              ) : (
+                <p className="note" role="status">Reading the record…</p>
+              )
+            )}
+            {tab === 'real' && (
+              storyPending && !storyV ? <p className="note" role="status">Reading the record…</p> : (
+                <>
+                  <p className="note desk-real-intro">
+                    A run of unusual years can happen by luck. Shuffle the years: if their order did not matter,
+                    a real trend would show up in the shuffled records too. Then compare the three ways of testing.
+                  </p>
+                  <RigorPanel
+                    v={storyPending ? null : storyV}
+                    customNote="The shuffle test reads the stored record of the preset places. For a region you draw, the verdict beside the map already uses the corrected test."
+                  />
+                </>
+              )
+            )}
+            {tab === 'series' && !analysis && (
+              <p className="note">{noData ?? 'The time series appears here once the region has been analysed.'}</p>
+            )}
+            {tab === 'series' && analysis && (
               <>
-              <TrendChart
-                analysis={analysis}
-                label={`${variable.short_name} · ${store.regionId === 'custom' ? 'custom' : region?.name}`}
-                color="#4f9cf9"
-                units={variable.units}
-                compare={compareAnalysis && cmpRegionMeta ? {
-                  analysis: compareAnalysis,
-                  label: `${variable.short_name} · ${cmpRegionMeta.name}`,
-                  color: '#ffb547',
-                } : undefined}
-                emergence={diag?.emergenceMarker}
-                changePoint={diag?.changeMarker}
-              />
-              {diag?.emergenceMarker && (
-                <p className="small" style={{ margin: '8px 0 0' }}>
-                  <b style={{ color: '#4cc38a' }}>│ Green line — time of emergence.</b>{' '}
-                  <span className="muted">{diag.emSentence}</span>
-                </p>
-              )}
-              {diag?.changeMarker && diag.cpVisible && (
-                <p className="small" style={{ margin: '6px 0 0' }}>
-                  <b style={{ color: '#ffb547' }}>┆ Dashed amber line — {changePointLabel(diag.pt)}.</b>{' '}
-                  <span className="muted">{changePointExplain(diag.pt, variable.units)}</span>
-                </p>
-              )}
-              <p className="muted small" style={{ marginBottom: 0 }}>
-                Dashed line: Sen's slope fit; shaded band: its {Math.round(cat.methods!.confidence_level * 100)}% confidence
-                interval. Solid lines: cos-latitude weighted regional means of each grid cell's{' '}
-                {store.season === 'annual' ? 'annual' : cat.seasons[store.season].label.toLowerCase()} values.
-                {store.regionId === 'custom' && ' Custom regions are fetched live from NASA POWER when you draw them.'}
-              </p>
-              </>
-              )}
-              {variable.id === 'PRECTOTCORR' && gpcp && presets && store.regionId !== 'custom' && (
-                <div style={{ marginTop: 14 }}>
-                  <GpcpPanel gpcp={gpcp} regionId={store.regionId}
-                    regionName={region?.name ?? ''} cfg={cfg}
-                    presets={presets} windowStart={windowMeta.start} windowEnd={windowMeta.end} />
+                <div className="desk-series-head">
+                  <div className="seg no-print">
+                    {(['annual', 'monthly', 'deseasonalised'] as const).map((m) => (
+                      <button key={m} className={monthlyMode === m ? 'on' : ''} aria-pressed={monthlyMode === m}
+                        onClick={() => setMonthlyMode(m)}>
+                        {m === 'annual' ? 'Annual + trend' : m === 'monthly' ? 'Raw monthly' : 'Cycle removed'}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="desk-badges">
+                    {(() => {
+                      const src = sourceFor(variable as Parameters<typeof sourceFor>[0])
+                      return store.regionId === 'custom' && !isMissionVar
+                        ? <a className="source" href="https://power.larc.nasa.gov/" target="_blank" rel="noopener noreferrer" title="Fetched live from the NASA POWER API for the region you drew"><Icon name="sat" />NASA POWER · live fetch</a>
+                        : <a className="source" href={src.url} target="_blank" rel="noopener noreferrer" title={src.title}><Icon name="sat" />{src.label}</a>
+                    })()}
+                    <span className="source" title="The statistics are calculated on this page, not on a server"><Icon name="rings" />Computed in your browser</span>
+                  </span>
                 </div>
-              )}
-              {presets && store.regionId !== 'custom' && variable && (
-                <CrossCheckPanel variable={variable} allVars={allVars} regionId={store.regionId}
-                  regionName={region?.name ?? ''} presets={presets} missions={missions} cfg={cfg}
-                  windowStart={windowMeta.start} windowEnd={windowMeta.end} />
-              )}
-            </>
-          )}
+                {monthlyMode !== 'annual' && presets && !isMissionVar && store.regionId !== 'custom' && (
+                  (() => {
+                    const entry = monthlyPresets?.[seriesKey]?.[store.regionId]
+                    if (!entry) return null
+                    return <MonthlyChart months={entry.months} values={entry.values}
+                      mode={monthlyMode} units={variable.units} color={tk.ink}
+                      regionName={region?.name ?? store.regionId} />
+                  })()
+                )}
+                {monthlyMode === 'annual' && (
+                  <>
+                    <TrendChart
+                      analysis={analysis}
+                      label={`${variable.short_name} · ${store.regionId === 'custom' ? 'custom' : region?.name}`}
+                      color={tk.ink}
+                      units={variable.units}
+                      compare={compareAnalysis && cmpRegionMeta ? {
+                        analysis: compareAnalysis,
+                        label: `${variable.short_name} · ${cmpRegionMeta.name}`,
+                        color: tk.leaf,
+                      } : undefined}
+                      emergence={diag?.emergenceMarker}
+                      changePoint={diag?.changeMarker}
+                    />
+                    {diag?.emergenceMarker && (
+                      <p className="key-line">
+                        <span className="key-mark solid" aria-hidden="true" />
+                        <b style={{ color: 'var(--leaf)' }}>Solid green line: time of emergence.</b>{' '}
+                        <span className="muted">{diag.emSentence}</span>
+                      </p>
+                    )}
+                    {diag?.changeMarker && diag.cpVisible && (
+                      <p className="key-line">
+                        <span className="key-mark dashed" aria-hidden="true" />
+                        <b style={{ color: 'var(--copper)' }}>Dashed copper line: {changePointLabel(diag.pt)}.</b>{' '}
+                        <span className="muted">{changePointExplain(diag.pt, variable.units)}</span>
+                      </p>
+                    )}
+                    <p className="note">
+                      Dashed line: Sen's slope fit; shaded band: its {Math.round(cat.methods!.confidence_level * 100)}% confidence
+                      interval. Solid lines: cos-latitude weighted regional means of each grid cell's{' '}
+                      {store.season === 'annual' ? 'annual' : cat.seasons[store.season].label.toLowerCase()} values.
+                      {store.regionId === 'custom' && ' Custom regions are fetched live from NASA POWER when you draw them.'}
+                    </p>
+                  </>
+                )}
+                {variable.id === 'PRECTOTCORR' && gpcp && presets && store.regionId !== 'custom' && (
+                  <div style={{ marginTop: 16 }}>
+                    <GpcpPanel gpcp={gpcp} regionId={store.regionId}
+                      regionName={region?.name ?? ''} cfg={cfg}
+                      presets={presets} windowStart={windowMeta.start} windowEnd={windowMeta.end} />
+                  </div>
+                )}
+                {presets && store.regionId !== 'custom' && variable && (
+                  <CrossCheckPanel variable={variable} allVars={allVars} regionId={store.regionId}
+                    regionName={region?.name ?? ''} presets={presets} missions={missions} cfg={cfg}
+                    windowStart={windowMeta.start} windowEnd={windowMeta.end} />
+                )}
+              </>
+            )}
 
-          {tab === 'sensitivity' && cfg && (
-            <SensitivityPanel cat={cat} variable={variable}
-              regionId={store.regionId} customPolygon={store.customPolygon} cfg={cfg} />
-          )}
+            {tab === 'sensitivity' && cfg && (
+              <SensitivityPanel cat={cat} variable={variable}
+                regionId={store.regionId} customPolygon={store.customPolygon} cfg={cfg} />
+            )}
 
-          {tab === 'exploratory' && store.regionId !== 'custom' && (
-            <AnomalyPanel variableId={store.variableId} regionId={store.regionId}
-              season={store.season} windowId={store.windowId} />
-          )}
+            {tab === 'exploratory' && store.regionId !== 'custom' && (
+              <AnomalyPanel variableId={store.variableId} regionId={store.regionId}
+                season={store.season} windowId={store.windowId} />
+            )}
+            {tab === 'exploratory' && store.regionId === 'custom' && (
+              <p className="note">Event diagnostics are prepared for the preset regions. Pick a preset region to see them.</p>
+            )}
 
-          {tab === 'methods' && <MethodsPanel cat={cat} />}
+            {tab === 'methods' && <MethodsPanel cat={cat} />}
 
-          {tab === 'export' && analysis && (
-            <ExportPanel
-              cat={cat}
-              variable={variable}
-              regionName={store.regionId === 'custom' ? 'Custom region' : region?.name ?? 'region'}
-              polygon={polygon}
-              windowMeta={windowMeta}
-              seasonLabel={cat.seasons[store.season].label}
-              analysis={analysis}
-              pack={pack}
-              compare={compareAnalysis && cmpRegionMeta ? {
-                name: cmpRegionMeta.name,
-                analysis: compareAnalysis,
-              } : undefined}
-            />
-          )}
-        </div>
+            {tab === 'export' && !analysis && (
+              <p className="note">{noData ?? 'There is nothing to export yet. Choose a region with a record, and the evidence package appears here.'}</p>
+            )}
+            {tab === 'export' && analysis && (
+              <ExportPanel
+                cat={cat}
+                variable={variable}
+                regionName={regionName === 'this region' ? 'region' : regionName}
+                polygon={polygon}
+                windowMeta={windowMeta}
+                seasonLabel={cat.seasons[store.season].label}
+                analysis={analysis}
+                pack={pack}
+                compare={compareAnalysis && cmpRegionMeta ? {
+                  name: cmpRegionMeta.name,
+                  analysis: compareAnalysis,
+                } : undefined}
+              />
+            )}
+          </div>
+        </section>
       </div>
-    </>
+    </div>
+  )
+}
+
+/** "+0.46" / "−0.12" with a true minus sign; formatting only. */
+function signed(x: number, digits: number): string {
+  if (!Number.isFinite(x)) return '—'
+  const s = x.toFixed(digits)
+  return x >= 0 ? `+${s}` : s.replace('-', '−')
+}
+
+/** A native select dressed as an inline choice chip in the question sentence. */
+function ChipSelect({ label, value, onChange, display, swatch, children }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  display: string
+  swatch?: string
+  children: React.ReactNode
+}) {
+  return (
+    <span className="dchip">
+      {swatch && <span className="dot" style={{ background: swatch }} aria-hidden="true" />}
+      <span className="dchip-val">{display}</span>
+      <Icon name="chev" />
+      <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+        {children}
+      </select>
+    </span>
   )
 }
 
 function AreaBar({ fractions }: { fractions: Record<string, number> }) {
   const items: [string, string, string][] = [
-    ['detected-increase', '#e1694b', 'detected increase'],
-    ['detected-decrease', '#4f7fd8', 'decrease'],
-    ['no-detected-trend', '#3a465e', 'no detected trend'],
-    ['insufficient-data', '#20242c', 'insufficient'],
+    ['detected-increase', 'inc', 'Detected increase'],
+    ['detected-decrease', 'dec', 'Detected decrease'],
+    ['no-detected-trend', 'none', 'No clear trend'],
+    ['insufficient-data', 'few', 'Too little data'],
   ]
   return (
     <>
-      <div className="areabar">
-        {items.map(([k, color]) => (
-          <div key={k} style={{ width: `${(fractions[k] ?? 0) * 100}%`, background: color }} />
+      <div className="areabar" role="img"
+        aria-label={items.map(([k, , label]) => `${label} ${((fractions[k] ?? 0) * 100).toFixed(1)} percent`).join(', ')}>
+        {items.map(([k, cls]) => (
+          <div key={k} className={`seg-${cls}`} style={{ width: `${(fractions[k] ?? 0) * 100}%` }} />
         ))}
       </div>
-      <div className="areabar-leg">
-        {items.map(([k, , label]) => (
-          <span key={k}><b>{((fractions[k] ?? 0) * 100).toFixed(1)}%</b> {label}</span>
+      <ul className="areabar-leg">
+        {items.map(([k, cls, label]) => (
+          <li key={k}>
+            <span className={`swatch sw-${cls}`} aria-hidden="true" />
+            <span className="lbl">{label}</span>
+            <b className="num">{((fractions[k] ?? 0) * 100).toFixed(1)}%</b>
+          </li>
         ))}
-      </div>
+      </ul>
     </>
   )
 }
 
-function RegionStat({ name, summary, variable, color }: {
+function RegionStat({ name, summary, variable, swatch }: {
   name: string
   summary?: { n: number; label: string }
   variable: { trend_units: string }
-  color: string
+  swatch: string
 }) {
   const s = summary as (Summarized | { n: number; label: string }) | undefined
   if (!s) return null
-  const lt = LABEL_TEXT[s.label] ?? { text: s.label, cls: 'pill-none' }
+  const st = STAMP[s.label] ?? { text: s.label, cls: 'none', icon: 'tilde' as IconName, title: s.label }
   return (
-    <div className="statrow">
-      <span className="k" style={{ color }}>{name}</span>
-      <span className="v">
-        {lt.text}
-        {'senSlope' in s && s.senSlope !== undefined && (
-          <> · {(s.senSlope * 10 >= 0 ? '+' : '') + (s.senSlope * 10).toFixed(2)} {variable.trend_units}</>
-        )}
-      </span>
+    <div className="ledger-row">
+      <span className="dot" style={{ background: swatch }} aria-hidden="true" />
+      <span className="nm">{name}</span>
+      <span className={`stamp sm ${st.cls}`} title={st.title}><Icon name={st.icon} /><span>{st.text}</span></span>
+      {'senSlope' in s && s.senSlope !== undefined && (
+        <span className="val num">{signed(s.senSlope * 10, 2)} {variable.trend_units}</span>
+      )}
     </div>
   )
 }
 
 function HoverTooltip({ hover, trends }: {
-  hover: { lon: number; lat: number; pixelIdx: number } | null
+  hover: MapHover | null
   trends: TrendPack | null
 }) {
   if (!hover || !trends) return null
   const p = hover.pixelIdx
-  const code = trends.label[p] & 0x7f
+  const code = trends.label[p] & 0x3f
   const caution = (trends.label[p] & 0x80) !== 0
   const names = ['detected-increase', 'detected-decrease', 'no-detected-trend', 'insufficient-data']
-  const lt = LABEL_TEXT[names[code]] ?? { text: names[code], cls: 'pill-none' }
+  const st = STAMP[names[code]] ?? { text: names[code], cls: 'none', icon: 'tilde' as IconName, title: names[code] }
   const slope10 = trends.slope[p] * 10
+  // follow the pointer, flipping to the other side near the right and bottom edges
+  const x = hover.x ?? 10, y = hover.y ?? 10, w = hover.w ?? 0, h = hover.h ?? 0
+  const flipX = w > 0 && x > w - 250, flipY = h > 0 && y > h - 190
+  const style: React.CSSProperties = {
+    left: flipX ? undefined : x + 14, right: flipX ? w - x + 14 : undefined,
+    top: flipY ? undefined : y + 14, bottom: flipY ? h - y + 14 : undefined,
+  }
   return (
-    <div className="tooltip" style={{ left: 10, top: 10 }}>
-      <div className="mono muted">{hover.lat >= 0 ? hover.lat.toFixed(2) + '°N' : (-hover.lat).toFixed(2) + '°S'}{' '}
+    <div className="tip desk-tip" style={style} role="status">
+      <div className="tip-where num">{hover.lat >= 0 ? hover.lat.toFixed(2) + '°N' : (-hover.lat).toFixed(2) + '°S'}{' '}
         {hover.lon >= 0 ? hover.lon.toFixed(2) + '°E' : (-hover.lon).toFixed(2) + '°W'}</div>
-      <div><span className={`pill ${lt.cls}`}>{lt.text}</span></div>
+      <div className="tip-verdict">
+        <span className={`tip-sw sw-${names[code]}`} aria-hidden="true" />{st.title}
+      </div>
       {Number.isFinite(slope10) && (
-        <div className="mono">
+        <div className="tip-nums num">
           slope {(slope10 >= 0 ? '+' : '') + slope10.toFixed(3)} per decade
           <br />
-          <span className="muted">
+          <span className="dim">
             CI [{(trends.ciLow[p] * 10).toFixed(3)}, {(trends.ciHigh[p] * 10).toFixed(3)}]
           </span>
           {Number.isFinite(trends.fdrP[p]) && (
             <>
               <br />
-              <span className="muted">FDR p ≈ {trends.fdrP[p].toPrecision(3)}</span>
+              <span className="dim">FDR p ≈ {trends.fdrP[p].toPrecision(3)}</span>
             </>
           )}
         </div>
       )}
-      {caution && <div className="small" style={{ color: 'var(--warn)' }}>⚠ interpretation caution</div>}
+      {caution && <div className="tip-note">Interpretation caution</div>}
       {(trends.label[p] & 0x40) !== 0 && !(code === 0 || code === 1) && (
-        <div className="small" style={{ color: '#ffd39a' }}>amber: naive test only — persistence adjustment removed it</div>
+        <div className="tip-note">Naive test only: the persistence adjustment removed it</div>
       )}
-      <div className="muted small">Map cells: FDR-corrected decisions.</div>
+      <div className="tip-foot">Map cells: FDR-corrected decisions.</div>
     </div>
   )
 }
 
 function MethodsPanel({ cat }: { cat: Catalog }) {
   return (
-    <div className="grid2">
-      <div>
+    <div className="desk-methods">
+      <section>
         <h3>Statistical method</h3>
-        <p className="muted small">
+        <p>
           <b>Trend magnitude</b> — Sen's slope: the median of all pairwise slopes between
           years, robust to outliers, computed against real calendar years.
-          <br /><br />
+        </p>
+        <p>
           <b>Significance</b> — Mann-Kendall test (normal approximation with tie and
           continuity corrections) at α = {cat.methods!.alpha}. An OLS slope t-test runs as a
           second opinion; disagreements trigger an “interpretation caution” flag.
-          <br /><br />
+        </p>
+        <p>
           <b>Uncertainty</b> — Gilbert's {Math.round(cat.methods!.confidence_level * 100)}% confidence
           interval for the Sen slope.
-          <br /><br />
+        </p>
+        <p>
           <b>Map multiplicity</b> — {cat.methods!.fdr_note}
         </p>
-      </div>
-      <div>
+      </section>
+      <section>
         <h3>Data &amp; provenance</h3>
-        <p className="muted small">
+        <p>
           <b>Primary</b> — NASA POWER monthly regional API, source-native MERRA-2 grid
           (0.5° × 0.625°), Jan 1981 – Dec 2025, worldwide ({cat.n_cells.toLocaleString()} grid
           cells). MERRA-2 is NASA GMAO's satellite-constrained reanalysis; the challenge
@@ -787,20 +987,22 @@ function MethodsPanel({ cat }: { cat: Catalog }) {
           validated Python engine; regional verdicts and any region you draw are computed
           live in your browser — for drawn regions, the monthly data is fetched directly
           from NASA POWER at that moment.
-          <br /><br />
+        </p>
+        <p>
           <b>Observed cross-check</b> — GPCP V2.3 combined satellite–gauge precipitation
           (NOAA PSL), 2.5°, for precipitation variables.
-          <br /><br />
+        </p>
+        <p>
           <b>Aggregation</b> — annual means are day-count-weighted; totals are built from
           mm/day rates × actual days per month; a year counts only when enough months are
           present (means ≥80%, totals and seasons 100%). Missing months are never zero.
-          <br /><br />
+        </p>
+        <p>
           <b>Regions</b> — a cell belongs to a region when its centre lies inside the polygon;
           regional means weight cells by cos(latitude) (real Earth-area weighting).
-          <br /><br />
-          Full provenance, including fetch timestamps, ships in every export.
         </p>
-      </div>
+        <p>Full provenance, including fetch timestamps, ships in every export.</p>
+      </section>
     </div>
   )
 }

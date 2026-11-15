@@ -1,6 +1,8 @@
-import { Component, type ReactNode } from 'react'
-import { useStore } from './state/store'
-import StartScreen from './components/StartScreen'
+import { Component, useEffect, type ReactNode } from 'react'
+import { useStore, type Screen } from './state/store'
+import { useTheme } from './state/theme'
+import { Icon, IconSprite } from './components/Icon'
+import JourneyScreen from './components/journey/JourneyScreen'
 import ConfigureScreen from './components/ConfigureScreen'
 import WorkspaceScreen from './components/WorkspaceScreen'
 import VariableLibrary from './components/VariableLibrary'
@@ -16,11 +18,11 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   render() {
     if (this.state.error) {
       return (
-        <div className="container" style={{ maxWidth: 640, marginTop: 60 }}>
-          <div className="card">
-            <h3>Something went wrong in this view</h3>
-            <p className="muted small">{String(this.state.error?.message ?? this.state.error)}</p>
-            <button className="primary" onClick={() => { this.setState({ error: null }); location.reload() }}>
+        <div className="wrap" style={{ maxWidth: 640, marginTop: 64 }}>
+          <div className="panel">
+            <h3>This page tripped over something</h3>
+            <p className="note">{String(this.state.error?.message ?? this.state.error)}</p>
+            <button className="btn" onClick={() => { this.setState({ error: null }); location.reload() }}>
               Reload Tellus
             </button>
           </div>
@@ -31,38 +33,74 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
+const NAV: { screen: Screen; label: string; keep?: boolean; also?: Screen[] }[] = [
+  { screen: 'start', label: 'Start here' },
+  { screen: 'workspace', label: 'Field desk', keep: true, also: ['configure'] },
+  { screen: 'library', label: 'What we measure' },
+  { screen: 'check', label: 'Check our work' },
+]
+
 export default function App() {
   const screen = useStore((s) => s.screen)
   const go = useStore((s) => s.go)
+  const theme = useTheme((s) => s.theme)
+  const toggleTheme = useTheme((s) => s.toggle)
+  const overridden = useTheme((s) => s.overridden)
+
+  // every screen change starts at the top of the new page
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }) }, [screen])
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand" onClick={() => go('start')}>
-          <h1><span className="sig">Tel</span>lus</h1>
-          <small>What is Earth telling us?</small>
+      <IconSprite />
+      <a className="skip" href="#main">Skip to content</a>
+      <header className="top">
+        <div className="wrap">
+          <button className="brand" onClick={() => go('start')} aria-label="Tellus, back to the start">
+            <Icon name="rings" />
+            <b>Tellus</b>
+            <small>What is Earth telling us?</small>
+          </button>
+          <nav aria-label="Main">
+            {NAV.map((n) => (
+              <button
+                key={n.screen}
+                className={n.keep ? 'keep' : undefined}
+                aria-current={screen === n.screen || n.also?.includes(screen) ? 'page' : undefined}
+                onClick={() => go(n.screen)}
+              >
+                {n.label}
+              </button>
+            ))}
+          </nav>
+          <button
+            className="theme-btn" onClick={toggleTheme} aria-pressed={theme === 'dusk'}
+            title={overridden
+              ? 'Your choice for now. Tellus goes back to your device setting when the device switches.'
+              : `Following your device (${theme === 'dusk' ? 'dark' : 'light'}). Press to switch for now.`}
+          >
+            <Icon name={theme === 'dusk' ? 'sun' : 'moon'} />
+            <span>{theme === 'dusk' ? 'Day' : 'Dusk'}</span>
+          </button>
         </div>
-        <div className="spacer" />
-        <nav>
-          <button className={`navbtn ${screen === 'start' ? 'active' : ''}`} onClick={() => go('start')}>Start</button>
-          <button className={`navbtn ${screen === 'configure' ? 'active' : ''}`} onClick={() => go('configure')}>Investigate</button>
-          <button className={`navbtn ${screen === 'library' ? 'active' : ''}`} onClick={() => go('library')}>Variable Library</button>
-          <button className={`navbtn ${screen === 'check' ? 'active' : ''}`} onClick={() => go('check')}>Check our work</button>
-        </nav>
       </header>
-      <div className="main">
+      <main className="main" id="main">
         <ErrorBoundary>
-          {screen === 'start' && <StartScreen />}
+          {screen === 'start' && <JourneyScreen />}
           {screen === 'configure' && <ConfigureScreen />}
           {screen === 'workspace' && <WorkspaceScreen />}
           {screen === 'library' && <VariableLibrary />}
           {screen === 'check' && <CheckOurWork />}
         </ErrorBoundary>
-      </div>
+      </main>
       <TourOverlay />
       <footer className="footer">
-        Data: NASA POWER (MERRA-2) · GPCP V2.3 (NOAA PSL) — analysis runs entirely in your
-        browser. Colour shows the direction and size of change, never whether it is “good” or “bad”.
+        <div className="wrap">
+          <span>
+            Data from NASA POWER (MERRA-2) and GPCP V2.3 (NOAA PSL). Every number is computed in your browser.
+          </span>
+          <span>Colour shows the direction and size of change, never whether it is good or bad.</span>
+        </div>
       </footer>
     </div>
   )
