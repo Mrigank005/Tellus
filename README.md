@@ -240,6 +240,7 @@ Results describe the analysed record. They are not forecasts.
 
 - **In the product:** Ask Tellus uses a large language model (NVIDIA Nemotron, served through OpenRouter) only to understand questions and phrase answers. Every number comes from the Tellus statistics engine and is checked before it is shown. Method questions use fixed, human-written answers. If the AI is unavailable, the rules-based guide Laya answers instead.
 - **In development:** the team used an AI coding assistant (Claude Code, by Anthropic) to speed up implementation, testing and design work. The team chose the methods, data and validation, and reviewed and tested the results. The test suite above checks the statistics independently.
+- **Code, README and project demo deck:** written with the help of Claude Code (an SI/AI coding assistant) and reviewed by the team. The banner, diagrams and slide graphics were drawn by code from real data, not by an image-generation model, and none of them uses NASA logos, flags or mission identifiers. The screenshots are real captures of the running app. No AI-generated audio or video is used.
 
 ## References
 
