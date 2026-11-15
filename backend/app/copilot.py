@@ -180,7 +180,8 @@ def answer(request: CopilotRequest, settings: Settings, context: dict[str, Any])
                 schema=RESPONSE_SCHEMA,
             )
             response = CopilotResponse.model_validate(raw)
-            checked = _validate_grounding(response, tool_context)
+            shown = {**tool_context, "evidence": _decade_only(tool_context.get("evidence", []))}
+            checked = _validate_grounding(response, shown)
             if checked is not response and context.get("evidence"):
                 return _question_answer(context, note="The AI's wording could not be verified against the "
                                                       "computed evidence, so this is the validated result itself.")
@@ -335,6 +336,27 @@ def _concept_if_unspecific(message: str, context: dict[str, Any] | None) -> Copi
     return concept_answer(message)
 
 
+_PER_YEAR_FIELDS = ("sen_slope", "ci_low", "ci_high", "ci_adj_low", "ci_adj_high", "ols_slope")
+
+
+def _decade_only(item: Any) -> Any:
+    """Copy of the evidence where trend rates exist ONLY per decade.
+
+    The engine stores slopes per year; people (and the UI) use per decade. A
+    model shown both once wrote the per-year number with a per-decade label
+    (10x too small) and the number check could not catch it, because the
+    figure did appear in the evidence. Showing and checking only per-decade
+    values removes that failure mode."""
+    if isinstance(item, list):
+        return [_decade_only(x) for x in item]
+    if not isinstance(item, dict):
+        return item
+    out = {k: _decade_only(v) for k, v in item.items()}
+    if isinstance(out.get("result"), dict) and "perDecade" in out:
+        out["result"] = {k: v for k, v in out["result"].items() if k not in _PER_YEAR_FIELDS}
+    return out
+
+
 def _llm_context(context: dict[str, Any]) -> dict[str, Any]:
     """Only what the model needs: the evidence (most relevant first), what the
     question resolved to, the methods, and sources relevant to this question.
@@ -348,7 +370,7 @@ def _llm_context(context: dict[str, Any]) -> dict[str, Any]:
     wanted |= {s.get("id") for s in context.get("retrievedSources", []) if isinstance(s, dict)}
     return {
         "resolved": (context.get("resolved") or {}).get("selection"),
-        "evidence": evidence,
+        "evidence": _decade_only(evidence),
         "methods": context.get("methods", {}),
         "sources": [s for s in context.get("sources", []) if s.get("id") in wanted],
     }

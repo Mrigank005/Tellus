@@ -45,3 +45,17 @@ def test_data_questions_mentioning_significance_still_get_data():
     q = "Is the Arctic warming trend significant?"
     r = _fallback(q, build_context(HIMALAYA, q))
     assert "The Arctic" in r.message
+
+
+def test_per_year_number_labelled_per_decade_is_rejected():
+    """Bengal IMERG: -10.1 mm/yr is -101 mm/decade. Writing '-10 mm per decade'
+    must fail verification (it did pass before the decade-only evidence)."""
+    from backend.app.copilot import _decade_only
+    q = "Is satellite rainfall changing in the Bengal delta?"
+    ctx = build_context(HIMALAYA, q)
+    shown = {**ctx, "evidence": _decade_only(ctx["evidence"])}
+    eid = "analysis:IMERG_PRECIP:bengal-delta:annual:full"
+    wrong = _response(("Sen's slope is about -10 mm per decade (95% CI -24 to 6.6).", eid))
+    right = _response(("Sen's slope is about -101 mm per decade (95% CI -237 to 66).", eid))
+    assert _validate_grounding(wrong, shown).kind == "abstain"
+    assert _validate_grounding(right, shown) is right
