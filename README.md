@@ -18,7 +18,7 @@
 **Live app: https://tellus-web.onrender.com** · free to use, no login
 **Project demo (7 slides):** [PDF](presentation/Tellus-SpaceApps2026.pdf) · [PowerPoint](presentation/Tellus-SpaceApps2026.pptx)
 
-Tellus is our entry for the NASA Space Apps Challenge 2026, **"Be An Earth System Trend Detective!"**. The challenge asks for *"a tool that can select variables measured by Earth science missions or produced by Earth science models, visualize how they change over time, and determine what is changing, where it is changing, how much it is changing, and if these changes are what scientists call significant."* Tellus does all five, for anyone, in plain language, and then shows its working.
+Tellus is **Team Numero Uno's** entry for the NASA Space Apps Challenge 2026, **"Be An Earth System Trend Detective!"**. The challenge asks for *"a tool that can select variables measured by Earth science missions or produced by Earth science models, visualize how they change over time, and determine what is changing, where it is changing, how much it is changing, and if these changes are what scientists call significant."* Tellus does all five, for anyone, in plain language, and then shows its working.
 
 ---
 
