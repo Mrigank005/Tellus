@@ -4,6 +4,32 @@
  */
 import type { Summarized } from './stats'
 
+// What "lower" means for each variable's "higher" phrase, so a detected
+// decrease never reads "trending toward warmer".
+const OPPOSITE: Record<string, string> = {
+  'warmer': 'cooler',
+  'warmer nights': 'cooler nights',
+  'warmer ocean': 'cooler ocean',
+  'hotter daytime extremes': 'cooler daytime extremes',
+  'wetter': 'drier',
+  'wetter soils': 'drier soils',
+  'more humid': 'less humid',
+  'windier': 'calmer',
+  'greener': 'less green',
+  'hazier air': 'clearer air',
+  'more polluted air': 'cleaner air',
+  'more phytoplankton': 'less phytoplankton',
+  'more evaporative demand': 'less evaporative demand',
+  'more water leaving the land': 'less water leaving the land',
+  'more water returning to the air': 'less water returning to the air',
+}
+
+export function lowerMeans(higherMeans: string): string {
+  if (OPPOSITE[higherMeans]) return OPPOSITE[higherMeans]
+  if (higherMeans.startsWith('more ')) return 'less ' + higherMeans.slice(5)
+  return `the opposite of ${higherMeans}`
+}
+
 export function plainVerdict(
   s: Summarized, trendUnits: string, higherMeans: string, years: number[],
 ): string {
@@ -15,15 +41,18 @@ export function plainVerdict(
   if (s.label === 'insufficient-data') {
     return `Not enough valid years in ${span} to say anything statistically.`
   }
+  const toward = perDecade >= 0 ? higherMeans : lowerMeans(higherMeans)
   if (s.label === 'no-detected-trend') {
-    return `Between ${span}, the movement toward ${higherMeans} shows no change that stands out from ordinary year-to-year variability (best estimate: ${dir} by about ${amt}, but that could easily be noise).`
+    return `Between ${span}, there is no change that stands out from ordinary year-to-year variability (best estimate: ${dir} by about ${amt}, slightly toward ${toward}, but that could easily be noise).`
   }
   const strength = s.mkPAdj < 0.001
     ? 'extremely unlikely to be chance'
     : s.mkPAdj < 0.01
       ? 'very unlikely to be chance'
       : 'unlikely to be chance'
-  return `Between ${span}, this region is trending toward ${higherMeans} by about ${amt} — ${strength}.`
+  // direction follows the verdict label, never just the sign of a rounded slope
+  const detectedToward = s.label === 'detected-decrease' ? lowerMeans(higherMeans) : higherMeans
+  return `Between ${span}, this region is trending toward ${detectedToward} by about ${amt} — ${strength}.`
 }
 
 export function plainHorizon(moreYears: number | null, cappedAt: number): string {

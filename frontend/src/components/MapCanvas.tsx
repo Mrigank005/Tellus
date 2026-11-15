@@ -302,12 +302,14 @@ export default function MapCanvas(props: MapCanvasProps) {
       const a = drawState.current.start
       const b: [number, number] = [e.lngLat.lng, e.lngLat.lat]
       drawState.current.start = null
+      // A plain click (no drag) must leave the two-click anchor alone; the
+      // 'click' handler below completes the rectangle on the second click.
+      // Clearing the anchor here made "click two opposite corners" impossible.
+      if (!(Math.abs(a[0] - b[0]) > 0.3 && Math.abs(a[1] - b[1]) > 0.3)) return
       drawState.current.anchor = null
       const src = map.getSource('draw-preview') as maplibregl.GeoJSONSource
       src?.setData({ type: 'FeatureCollection', features: [] })
-      if (Math.abs(a[0] - b[0]) > 0.3 && Math.abs(a[1] - b[1]) > 0.3) {
-        onDrawn(rectPolygon(a, b))
-      }
+      onDrawn(rectPolygon(a, b))
     }
     // two-click mode: first click anchors, second click completes — works even
     // when drag events are unavailable (touchpads, embedded browsers)

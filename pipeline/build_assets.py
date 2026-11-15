@@ -239,7 +239,8 @@ def stage_monthly(force: bool = False):
                 "values": [None if not np.isfinite(x) else round(float(x), 3) for x in series],
             }
         print(f"monthly {param}: done")
-    out.write_text(json.dumps(doc, separators=(",", ":")))
+    # allow_nan=False: fail the build rather than write NaN/Infinity (invalid JSON)
+    out.write_text(json.dumps(doc, separators=(",", ":"), allow_nan=False))
     print(f"monthly: {out.stat().st_size/1e6:.2f} MB")
 
 
@@ -277,7 +278,8 @@ def stage_anomalies(force: bool = False):
                         "changePoints": candidate_change_points(yr2, va2)[:3],
                     }
                     n += 1
-    out.write_text(json.dumps(doc, separators=(",", ":")))
+    # allow_nan=False: fail the build rather than write NaN/Infinity (invalid JSON)
+    out.write_text(json.dumps(doc, separators=(",", ":"), allow_nan=False))
     print(f"anomalies: {n} combinations, {out.stat().st_size/1e6:.2f} MB")
 
 

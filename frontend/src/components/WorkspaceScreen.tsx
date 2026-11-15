@@ -53,6 +53,9 @@ export default function WorkspaceScreen() {
   const [grid, setGrid] = useState<Grid | null>(null)
   const [pack, setPack] = useState<TrendPack | null>(null)
   const [analysis, setAnalysis] = useState<RegionAnalysis | null>(null)
+  // why there is no analysis (dataset not covering the region, etc.), so the
+  // card never keeps showing the previous variable's verdict
+  const [noData, setNoData] = useState<string | null>(null)
   const [compareAnalysis, setCompareAnalysis] = useState<RegionAnalysis | null>(null)
   const [gpcp, setGpcp] = useState<GpcpData | null>(null)
   const [presets, setPresets] = useState<Presets | null>(null)
@@ -121,7 +124,14 @@ export default function WorkspaceScreen() {
     const win = { start: windowMeta.start, end: windowMeta.end }
     const run = async () => {
       // Region A
-      if (store.regionId === 'custom' && store.customPolygon) {
+      const isMission = (variable as VariableMeta & { has_global_map?: boolean }).has_global_map === false
+      if (isMission && !missions) return  // satellite series still loading
+      if (store.regionId === 'custom' && store.customPolygon && isMission) {
+        setAnalysis(null)
+        setNoData(`Drawing a region fetches NASA POWER (MERRA-2) data live, so it works with the MERRA-2 `
+          + `variables only. ${variable.short_name} comes from ${(variable as VariableMeta & { instrument?: string }).instrument ?? 'another source'}; `
+          + `pick one of the preset regions to see it.`)
+      } else if (store.regionId === 'custom' && store.customPolygon) {
         setLiveStatus('Fetching live NASA data…')
         try {
           const bbox = bboxOf(store.customPolygon)
@@ -139,7 +149,10 @@ export default function WorkspaceScreen() {
           const sel: (number | null)[] = Array.from(rs.values).map((v) =>
             Number.isFinite(v) ? v : null)
           const a = regionAnalysis(season.years, sel, rs.nCells, win, cfg)
-          if (!cancelled) setAnalysis({ ...a, coverage: Math.min(...rs.nValid) / Math.max(1, rs.nCells) })
+          if (!cancelled) {
+            setAnalysis({ ...a, coverage: Math.min(...rs.nValid) / Math.max(1, rs.nCells) })
+            setNoData(null)
+          }
         } catch (e) {
           console.error(e)
           if (!cancelled) setLiveStatus(`Live fetch failed: ${(e as Error).message}`)
@@ -150,8 +163,20 @@ export default function WorkspaceScreen() {
         const mKey = (variable as VariableMeta & { has_global_map?: boolean }).has_global_map === false
           ? variable.id : variable.power_parameter
         const entry = await getSeriesEntry(mKey, store.season, store.regionId, presets, missions)
+        if (cancelled) return  // a newer selection has started; never overwrite it
         if (entry) {
           setAnalysis(regionAnalysis(entry.years, entry.values, entry.n_cells, win, cfg))
+          setNoData(null)
+        } else {
+          setAnalysis(null)
+          const covered = isMission
+            ? cat.regions.filter((r) => missions?.[variable.id]?.[store.season]?.[r.id]).map((r) => r.name)
+            : []
+          setNoData(`${variable.short_name} has no record for ${region?.name ?? 'this region'}`
+            + (store.season !== 'annual' ? ' in this season' : '') + '. '
+            + (covered.length
+              ? `This dataset covers: ${covered.join(', ')}.`
+              : 'Try another region or season.'))
         }
       }
       // Region B (presets only)
@@ -159,16 +184,15 @@ export default function WorkspaceScreen() {
         const mKey = (variable as VariableMeta & { has_global_map?: boolean }).has_global_map === false
           ? variable.id : variable.power_parameter
         const entry = await getSeriesEntry(mKey, store.season, store.compareRegionId, presets, missions)
-        if (entry) {
-          setCompareAnalysis(regionAnalysis(entry.years, entry.values, entry.n_cells, win, cfg))
-        }
+        if (cancelled) return
+        setCompareAnalysis(entry ? regionAnalysis(entry.years, entry.values, entry.n_cells, win, cfg) : null)
       } else {
         setCompareAnalysis(null)
       }
     }
     run()
     return () => { cancelled = true }
-  }, [cat, cfg, variable, windowMeta, presets, store.regionId,
+  }, [cat, cfg, variable, windowMeta, presets, missions, store.regionId,
       store.customPolygon, store.compareRegionId, store.season])
 
   const fractions = useMemo(
@@ -423,7 +447,9 @@ export default function WorkspaceScreen() {
                   </div>
                 </details>
               </>
-            ) : <div className="muted">Computing…</div>}
+            ) : noData
+              ? <div className="cautionbox" style={{ marginTop: 8 }}>{noData}</div>
+              : <div className="muted">Computing…</div>}
           </div>
 
           {cmpSummary && compareAnalysis && (() => {

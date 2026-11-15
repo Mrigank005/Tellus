@@ -28,6 +28,12 @@ def robust_anomalies(
         return []
     events: list[dict[str, float | str]] = []
     half = window // 2
+    # fallback spread when a local neighbourhood has none (identical values):
+    # dividing by zero produced score=Infinity, which is not valid JSON and
+    # broke the "Exploratory events" tab
+    global_scale = 1.4826 * float(np.median(np.abs(y - np.median(y))))
+    if global_scale <= 0:
+        global_scale = float(np.std(y))
     for i in range(y.size):
         lo, hi = max(0, i - half), min(y.size, i + half + 1)
         neighbourhood = np.delete(y[lo:hi], i - lo)
@@ -37,11 +43,10 @@ def robust_anomalies(
         mad = float(np.median(np.abs(neighbourhood - median)))
         scale = 1.4826 * mad
         if scale <= 0:
-            if y[i] == median:
+            if y[i] == median or global_scale <= 0:
                 continue
-            score = math.inf
-        else:
-            score = abs(float(y[i]) - median) / scale
+            scale = global_scale
+        score = abs(float(y[i]) - median) / scale
         if score >= threshold:
             events.append({
                 "year": float(x[i]),
