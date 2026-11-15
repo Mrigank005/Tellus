@@ -16,7 +16,7 @@
 > **Why "Tellus"?** *Tellus* is Latin for "Earth". The Romans had a goddess of the same name, and she was apparently a great listener. Our planet has been talking for 4.5 billion years, mostly in noisy data, and nobody was taking notes. So we built an app that does, then asks the data to prove it wasn't just having a bad year.
 
 **Live app: https://tellus-web.onrender.com** · free to use, no login
-**Project demo (7 slides):** [PDF](presentation/Tellus-SpaceApps2026.pdf) · [PowerPoint](presentation/Tellus-SpaceApps2026.pptx)
+**Project demo (7 slides):** [PDF](https://drive.google.com/file/d/1zjf45sV3CjjYC3RN66miAm9bv4pU5jni/view?usp=sharing) · [Slides](https://docs.google.com/presentation/d/14R4tcCwkePYPi_bDe4yb9AJiXWfa2Rrj/edit?usp=sharing)
 
 Tellus is **Team Numero Uno's** entry for the NASA Space Apps Challenge 2026, **"Be An Earth System Trend Detective!"**. The challenge asks for *"a tool that can select variables measured by Earth science missions or produced by Earth science models, visualize how they change over time, and determine what is changing, where it is changing, how much it is changing, and if these changes are what scientists call significant."* Tellus does all five, for anyone, in plain language, and then shows its working.
 
@@ -47,6 +47,7 @@ Tellus answers the question honestly:
 ## What you can do
 
 ### The journey (start page)
+
 A guided path, one question per screen, designed for someone with no background in statistics.
 
 <img src="assets/screens/hero.png" alt="The Tellus start page: Earth keeps a diary, a tree-ring disc of global temperature since 1981">
@@ -75,7 +76,7 @@ A guided path, one question per screen, designed for someone with no background 
 
 <table>
 <tr>
-<td width="50%"><img src="assets/screens/desk-compare.png" alt="Comparing the Arctic with the tropics: both series against their own baselines, and the difference-of-trends test"><br><sub><b>Compare two places.</b> The Arctic warms +0.27 °C per decade faster than the tropics (p &lt; 0.001).</sub></td>
+<td width="50%"><img src="assets/screens/desk-compare.png" alt="Comparing the Arctic with the tropics: both series against their own baselines, and the difference-of-trends test"><br><sub><b>Compare two places.</b> The Arctic warms +0.27 °C per decade faster than the tropics (p < 0.001).</sub></td>
 <td width="50%"><img src="assets/screens/desk-sensitivity.png" alt="Sensitivity: every start and end year window of 20 or more years"><br><sub><b>Did we cherry-pick the dates?</b> The Arctic increase is detected in 98% of 351 windows.</sub></td>
 </tr>
 </table>
@@ -95,6 +96,7 @@ A guided path, one question per screen, designed for someone with no background 
 - **Export:** observations CSV, provenance JSON and a printable report.
 
 ### Ask Tellus (AI assistant)
+
 Type a question in your own words, for example *"Is the Arctic warming faster than the tropics?"*.
 
 <img src="assets/screens/ask-tellus.png" alt="Ask Tellus answering whether the Arctic is warming faster than the tropics, with its evidence listed">
@@ -106,6 +108,7 @@ Type a question in your own words, for example *"Is the Arctic warming faster th
 - If the AI service is unavailable, a rules-based guide (Laya) answers instead, so the app never depends on it.
 
 ### The rest of the site
+
 - **What we measure:** a field guide to all 21 measurements, with definitions, units, what each is good for, its source, and things to keep in mind.
 - **Set up your question:** the full set of choices with recommendations for what to measure in different kinds of place.
 - **Check our work:** every validation case in full, with sources.
@@ -123,28 +126,28 @@ Type a question in your own words, for example *"Is the Arctic warming faster th
 </table>
 
 <p align="center">
-<img src="assets/screens/phone-hero.png" alt="Tellus on a phone: the start page" width="30%">&nbsp;
-<img src="assets/screens/phone-read.png" alt="Tellus on a phone: the answer" width="30%">&nbsp;
+<img src="assets/screens/phone-hero.png" alt="Tellus on a phone: the start page" width="30%"> 
+<img src="assets/screens/phone-read.png" alt="Tellus on a phone: the answer" width="30%"> 
 <img src="assets/screens/phone-desk.png" alt="Tellus on a phone: the field desk" width="30%">
 </p>
 
 ## Honest science, built in
 
-| Principle | How Tellus does it |
-|---|---|
-| Neighbouring years are not independent | Mann-Kendall significance, the Sen slope interval and the OLS test are all adjusted for lag-1 persistence (AR(1) effective sample size). The naive result is shown alongside, and the map marks cells that only the naive test would call significant. |
-| Robust rate of change | Sen's slope (median of all pairwise slopes) with a 95% interval, reported per decade |
-| Many places means many chances of a fluke | Benjamini–Hochberg false discovery rate control across every map |
-| When did it become clear? | Time of emergence: the first end year from which the trend stays significant |
-| Steady trend or a single jump? | Pettitt change-point test, labelled exploratory |
-| How long until a weak trend could be confirmed? | Detection horizon: an estimate of how many more years of data would be needed |
-| Does it depend on the dates chosen? | Start × end window scan and season × window grid |
-| Are two places really different? | Difference-of-trends test with a persistence-aware standard error |
-| Missing is not zero | Years with too few months are left out, never filled in |
-| Area, not pixels | Regional means and area shares weighted by cos(latitude) |
-| A trend needs enough data | At least 20 valid years (18 for ocean chlorophyll only, always labelled) |
-| Models can disagree with observations | Model rainfall cross-checked against observed GPCP V2.3, and model variables against NASA satellite records |
-| Shown, not hidden | A one-click shuffle test lets anyone see what "significant" means |
+| Principle                                       | How Tellus does it                                                                                                                                                                                                                                     |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Neighbouring years are not independent          | Mann-Kendall significance, the Sen slope interval and the OLS test are all adjusted for lag-1 persistence (AR(1) effective sample size). The naive result is shown alongside, and the map marks cells that only the naive test would call significant. |
+| Robust rate of change                           | Sen's slope (median of all pairwise slopes) with a 95% interval, reported per decade                                                                                                                                                                   |
+| Many places means many chances of a fluke       | Benjamini–Hochberg false discovery rate control across every map                                                                                                                                                                                      |
+| When did it become clear?                       | Time of emergence: the first end year from which the trend stays significant                                                                                                                                                                           |
+| Steady trend or a single jump?                  | Pettitt change-point test, labelled exploratory                                                                                                                                                                                                        |
+| How long until a weak trend could be confirmed? | Detection horizon: an estimate of how many more years of data would be needed                                                                                                                                                                          |
+| Does it depend on the dates chosen?             | Start × end window scan and season × window grid                                                                                                                                                                                                     |
+| Are two places really different?                | Difference-of-trends test with a persistence-aware standard error                                                                                                                                                                                      |
+| Missing is not zero                             | Years with too few months are left out, never filled in                                                                                                                                                                                                |
+| Area, not pixels                                | Regional means and area shares weighted by cos(latitude)                                                                                                                                                                                               |
+| A trend needs enough data                       | At least 20 valid years (18 for ocean chlorophyll only, always labelled)                                                                                                                                                                               |
+| Models can disagree with observations           | Model rainfall cross-checked against observed GPCP V2.3, and model variables against NASA satellite records                                                                                                                                            |
+| Shown, not hidden                               | A one-click shuffle test lets anyone see what "significant" means                                                                                                                                                                                      |
 
 **A finding the app makes visible:** monsoon rainfall over the Sahel (June to September, 1981–2025) rises by about **+35 mm per decade**. The naive test calls this significant (p = 0.019). But wet years cluster: Tellus counts about **15 independent years out of 45**, and the corrected test gives **p = 0.18**, not clear of ordinary weather. Tellus shows both results side by side and explains the difference.
 
@@ -177,32 +180,138 @@ Tellus's numbers are compared with independent datasets and published studies, e
 
 All data is open. Every mission download is logged with its request URL and UTC time (`data/raw/missions/fetch_log*.jsonl`).
 
-| Dataset | Role | Coverage | Access |
-|---|---|---|---|
-| **NASA POWER** monthly regional API (MERRA-2, 0.5° × 0.625°) | Core analysis: 8 variables, global per-cell maps, live fetch for drawn regions | 1981–2025, whole planet | POWER API |
-| **GPM IMERG** Final monthly V07 | Observed satellite rainfall | 1998–2024 | NASA Giovanni |
-| **GLDAS Noah v2.1** (runoff, evapotranspiration, soil moisture) | Second NASA land model | 2000–2025 | NASA Giovanni |
-| **AIRS / Aqua** surface air temperature v7 | Satellite temperature | 2003–2025 | NASA Giovanni |
-| **OMI / Aura** tropospheric NO₂ and aerosol optical depth | Air quality from space | 2005–2025 | NASA Giovanni |
-| **NASA NOBM** ocean chlorophyll | Ocean productivity | 1998–2015 | NASA Giovanni |
-| **NOAA OISST v2**, **NOAA CDR NDVI**, **CMORPH** | Sea-surface temperature, vegetation, second satellite rainfall record | varies, from 1981 | KNMI Climate Explorer |
-| **NOAA NCEI Global Summary of the Month** | Weather-station ground truth (De Bilt) | 1901–2025 | NOAA Climate Data Online |
-| **GPCP V2.3** (NOAA PSL) | Observed rainfall cross-check | 1979–2025 | NOAA PSL |
+| Dataset                                                               | Role                                                                           | Coverage                 | Access                   |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------ | ------------------------ |
+| **NASA POWER** monthly regional API (MERRA-2, 0.5° × 0.625°) | Core analysis: 8 variables, global per-cell maps, live fetch for drawn regions | 1981–2025, whole planet | POWER API                |
+| **GPM IMERG** Final monthly V07                                 | Observed satellite rainfall                                                    | 1998–2024               | NASA Giovanni            |
+| **GLDAS Noah v2.1** (runoff, evapotranspiration, soil moisture) | Second NASA land model                                                         | 2000–2025               | NASA Giovanni            |
+| **AIRS / Aqua** surface air temperature v7                      | Satellite temperature                                                          | 2003–2025               | NASA Giovanni            |
+| **OMI / Aura** tropospheric NO₂ and aerosol optical depth      | Air quality from space                                                         | 2005–2025               | NASA Giovanni            |
+| **NASA NOBM** ocean chlorophyll                                 | Ocean productivity                                                             | 1998–2015               | NASA Giovanni            |
+| **NOAA OISST v2**, **NOAA CDR NDVI**, **CMORPH**    | Sea-surface temperature, vegetation, second satellite rainfall record          | varies, from 1981        | KNMI Climate Explorer    |
+| **NOAA NCEI Global Summary of the Month**                       | Weather-station ground truth (De Bilt)                                         | 1901–2025               | NOAA Climate Data Online |
+| **GPCP V2.3** (NOAA PSL)                                        | Observed rainfall cross-check                                                  | 1979–2025               | NOAA PSL                 |
 
 Tellus uses three of the challenge's listed resources directly: **NASA Giovanni, KNMI Climate Explorer and NOAA Climate Data Online**. Core MERRA-2 variables: air temperature, daytime maximum, nighttime minimum, precipitation, relative humidity, wind speed at 10 m, surface soil wetness and evaporation. 22 preset regions cover every continent and ocean.
 
 ## Architecture
 
-```
-pipeline/   Python: fetch -> aggregate (annual, Jun-Sep, Dec-Feb) -> statistics -> static assets
-frontend/   React + TypeScript + Vite: MapLibre map, ECharts and SVG charts, in-browser statistics engine
-backend/    FastAPI: Ask Tellus (question understanding, grounded answers, number checking, fallback)
+The website is static: it ships precomputed global maps and runs the statistics in the browser. A small Python service adds the Ask Tellus assistant. Three diagrams follow (they render directly on GitHub).
+
+### System overview
+
+```mermaid
+flowchart TB
+    user(["Reader<br/>phone or desktop"])
+
+    subgraph web["tellus-web: static site on Render"]
+        direction LR
+        ui["React + TypeScript + Vite<br/>journey, field desk,<br/>library, check page"]
+        views["MapLibre GL JS map<br/>ECharts and SVG charts"]
+        eng["In-browser statistics engine<br/>Sen slope, Mann-Kendall with AR(1),<br/>FDR, emergence, change point"]
+        ui --> views
+        ui --> eng
+    end
+
+    subgraph data["Precomputed assets shipped with the site"]
+        direction LR
+        packs[("Trend packs<br/>a global map per variable,<br/>season and window")]
+        presets[("Preset series<br/>22 regions, 21 measurements")]
+        valid[("validation.json<br/>9 published checks")]
+    end
+
+    subgraph svc["tellus-backend: FastAPI on Render"]
+        direction LR
+        copilot["Ask Tellus<br/>understand, ground,<br/>check numbers"]
+        pyeng["Python statistics engine<br/>the reference implementation"]
+        copilot --> pyeng
+    end
+
+    llm[/"OpenRouter, NVIDIA Nemotron<br/>wording only"/]
+    power[/"NASA POWER API<br/>live fetch for a drawn region"/]
+
+    user --> ui
+    eng --> packs
+    eng --> presets
+    eng --> valid
+    ui -- "ask a question" --> copilot
+    eng -- "drawn region: live fetch" --> power
+    copilot --> llm
+    pyeng -. "parity-tested against" .-> eng
 ```
 
-- The website is static. All statistics for preset regions and drawn regions run in the browser.
-- Global maps are precomputed with the same engine and loaded per view.
-- The assistant's backend reuses the Python engine, so its numbers match the app's.
-- Hosted on Render (static site plus a small Python service).
+### From NASA data to the page
+
+```mermaid
+flowchart TB
+    subgraph src["Open data"]
+        p1[/"NASA POWER, MERRA-2<br/>monthly, 1981 to 2025"/]
+        p2[/"NASA Giovanni<br/>IMERG, GLDAS, AIRS, OMI, NOBM"/]
+        p3[/"KNMI Climate Explorer<br/>NOAA Climate Data Online<br/>GPCP"/]
+        p4[/"GISTEMP, NOAAGlobalTemp,<br/>HadCRUT5, published studies"/]
+    end
+
+    subgraph pipe["pipeline/ (Python)"]
+        f1["fetch_power.py<br/>tiles of 10 deg"]
+        f2["fetch_missions.py<br/>fetch_open_resources.py<br/>every download logged with URL and time"]
+        agg["Aggregate<br/>annual, Jun-Sep, Dec-Feb<br/>months missing stay missing"]
+        st["stats.py<br/>trend, persistence correction,<br/>FDR across cells"]
+        bv["build_validation.py"]
+    end
+
+    subgraph out["Static assets"]
+        o1[("Global trend packs<br/>207,936 grid cells")]
+        o2[("presets.json and<br/>missions.json")]
+        o3[("validation.json")]
+    end
+
+    p1 --> f1 --> agg
+    p2 --> f2
+    p3 --> f2
+    f2 --> agg
+    agg --> st
+    st --> o1
+    st --> o2
+    p4 --> bv --> o3
+    o1 --> site["tellus-web"]
+    o2 --> site
+    o3 --> site
+```
+
+### What happens when you ask Tellus a question
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Reader
+    participant W as Browser
+    participant B as Backend (FastAPI)
+    participant E as Statistics engine
+    participant L as Language model
+
+    U->>W: "Is the Arctic warming faster than the tropics?"
+    W->>B: question and current selection
+    B->>B: scope guard and rate limit
+    B->>B: read the places, variable, season<br/>and years named (fixed rules)
+    B->>E: compute the trend, or the difference of two trends
+    E-->>B: numbers, intervals, p-values
+    B->>L: question and computed evidence only
+    L-->>B: plain-words answer with claims
+    B->>B: check every number against the engine
+    alt numbers verified
+        B-->>W: answer, evidence list, limits
+    else model unavailable or a number does not match
+        B-->>W: answer built from the evidence alone
+    end
+    W-->>U: answer, with the chart it refers to
+```
+
+Notes:
+
+- All statistics for preset regions and drawn regions run in the browser, with the same engine that is parity-tested against the Python reference.
+- Global maps are precomputed with that engine and loaded per view.
+- The assistant's backend reuses the Python engine, so its numbers match the app's. The language model only phrases the answer and never supplies a number.
+- Hosted on Render: a static site and a small Python service, both on the free plan.
 
 ## Run it
 
@@ -240,17 +349,18 @@ Results describe the analysed record. They are not forecasts.
 
 - **In the product:** Ask Tellus uses a large language model (NVIDIA Nemotron, served through OpenRouter) only to understand questions and phrase answers. Every number comes from the Tellus statistics engine and is checked before it is shown. Method questions use fixed, human-written answers. If the AI is unavailable, the rules-based guide Laya answers instead.
 - **In development:** the team used an AI coding assistant (Claude Code, by Anthropic) to speed up implementation, testing and design work. The team chose the methods, data and validation, and reviewed and tested the results. The test suite above checks the statistics independently.
-- **Code, README and project demo deck:** written with the help of Claude Code (an SI/AI coding assistant) and reviewed by the team. The banner, diagrams and slide graphics were drawn by code from real data, not by an image-generation model, and none of them uses NASA logos, flags or mission identifiers. The screenshots are real captures of the running app. No AI-generated audio or video is used.
 
 ## References
 
 **Data**
+
 - NASA POWER Project, NASA Langley Research Center: https://power.larc.nasa.gov/ · MERRA-2: Gelaro, R. et al. (2017), *J. Climate* 30, 5419–5454.
 - NASA GES DISC Giovanni: https://giovanni.gsfc.nasa.gov/ · GPM IMERG Final V07 (Huffman, G. J. et al.), GPM_3IMERGM: https://disc.gsfc.nasa.gov/datasets/GPM_3IMERGM_07/summary · GLDAS Noah v2.1 · AIRS v7 · OMI OMNO2d v003: https://disc.gsfc.nasa.gov/datasets/OMNO2d_003/summary · OMI aerosol (OMAERUVd) · NASA NOBM chlorophyll.
 - KNMI Climate Explorer: https://climexp.knmi.nl/ · NOAA OISST v2 (Reynolds, R. W. et al. 2002, *J. Climate* 15, 1609–1625) · NOAA CDR NDVI · CMORPH.
 - NOAA NCEI Global Summary of the Month via Climate Data Online: https://www.ncei.noaa.gov/
 - GPCP V2.3: Adler, R. F. et al. (2018), *Atmosphere* 9(4), 138, https://doi.org/10.3390/atmos9040138 (NOAA PSL copy).
 - Validation references:
+
   - GISTEMP v4 (Lenssen et al. 2019)
   - NOAAGlobalTemp (NOAA NCEI)
   - HadCRUT 5.0.2.0 (Morice et al. 2021)
@@ -264,6 +374,7 @@ Results describe the analysed record. They are not forecasts.
 - Map: coastline from Natural Earth (public domain). Basemap from OpenFreeMap, built on OpenMapTiles and OpenStreetMap contributors (ODbL).
 
 **Methods**
+
 - Mann, H. B. (1945), *Econometrica* 13, 245–259
 - Kendall, M. G. (1975), *Rank Correlation Methods*
 - Sen, P. K. (1968), *JASA* 63, 1379–1389
@@ -275,6 +386,7 @@ Results describe the analysed record. They are not forecasts.
 - Helsel, D. R. & Hirsch, R. M. (2002), *Statistical Methods in Water Resources*
 
 **Software (all open source)**
+
 - React, TypeScript and Vite (MIT)
 - MapLibre GL JS (BSD-3-Clause)
 - Apache ECharts (Apache-2.0)
