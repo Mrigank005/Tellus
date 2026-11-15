@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
-DEFAULT_MODEL = "google/gemma-4-31b-it:free"
+DEFAULT_MODEL = "nvidia/nemotron-3.5-super-vl:free"
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,8 @@ class Settings:
     llm_base_url: str
     llm_model: str
     llm_structured_outputs: bool
+    llm_max_tokens: int
+    llm_reasoning_effort: str
     request_timeout_seconds: float
     max_message_chars: int
     max_tool_calls: int
@@ -72,7 +74,11 @@ def load_settings() -> Settings:
         llm_base_url=os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/"),
         llm_model=os.getenv("LLM_MODEL", DEFAULT_MODEL),
         llm_structured_outputs=os.getenv("LLM_STRUCTURED_OUTPUTS", "false").lower() in {"1", "true", "yes"},
-        request_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
+        # reasoning models spend part of the budget thinking before they answer;
+        # too small a budget returns empty content (finish_reason "length")
+        llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", "4000")),
+        llm_reasoning_effort=os.getenv("LLM_REASONING_EFFORT", "low").strip().lower(),
+        request_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "45")),
         max_message_chars=int(os.getenv("COPILOT_MAX_MESSAGE_CHARS", "2000")),
         max_tool_calls=int(os.getenv("COPILOT_MAX_TOOL_CALLS", "4")),
         rate_limit_requests=int(os.getenv("COPILOT_RATE_LIMIT_REQUESTS", "20")),

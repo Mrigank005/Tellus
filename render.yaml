@@ -20,11 +20,15 @@ services:
       - key: LLM_BASE_URL
         value: https://openrouter.ai/api/v1
       - key: LLM_MODEL
-        value: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+        value: nvidia/nemotron-3.5-super-vl:free
       - key: LLM_STRUCTURED_OUTPUTS
-        value: "false"
+        value: "true"
+      - key: LLM_MAX_TOKENS
+        value: "4000"          # reasoning models think before answering; 1200 returned empty replies
+      - key: LLM_REASONING_EFFORT
+        value: low
       - key: LLM_TIMEOUT_SECONDS
-        value: "30"
+        value: "45"
       - key: TELLUS_ALLOWED_ORIGINS
         sync: false          # the static site URL, e.g. https://tellus-web.onrender.com
 

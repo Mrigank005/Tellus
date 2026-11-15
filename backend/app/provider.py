@@ -89,6 +89,9 @@ def _post_chat_completion(settings: Settings, payload: dict[str, Any]) -> dict[s
     """POST to /chat/completions with ordered key failover; returns parsed JSON."""
     if not settings.llm_api_keys:
         raise ProviderUnavailable("LLM provider is not configured.")
+    if ("openrouter" in settings.llm_base_url and settings.llm_reasoning_effort in {"low", "medium", "high"}
+            and "reasoning" not in payload):
+        payload = {**payload, "reasoning": {"effort": settings.llm_reasoning_effort}}
     data = json.dumps(payload).encode("utf-8")
     last_error: Exception | None = None
     for index in key_order(settings):
@@ -140,7 +143,7 @@ def generate_chat(
     payload: dict[str, Any] = {
         "model": settings.llm_model,
         "temperature": 0.1,
-        "max_tokens": 1400,
+        "max_tokens": settings.llm_max_tokens,
         "messages": messages,
     }
     if tools:
@@ -166,7 +169,7 @@ def generate_json(
     payload = {
         "model": settings.llm_model,
         "temperature": 0.1,
-        "max_tokens": 1200,
+        "max_tokens": settings.llm_max_tokens,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},

@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DATA = ROOT / "frontend" / "public" / "data"
 sys.path.insert(0, str(ROOT / "pipeline"))
 
-from stats import summarize  # noqa: E402
+from stats import slope_difference, summarize  # noqa: E402
+
+from .intent import resolve  # noqa: E402
 
 
 @lru_cache(maxsize=1)
@@ -170,6 +172,15 @@ def analyze_preset(
         "minYears": min_years,
         "result": _json_safe(result),
     }
+    # per-decade restatements (the units shown to people) so answers can quote
+    # them and the grounding check can still verify every number
+    if result.get("sen_slope") is not None:
+        output["perDecade"] = _json_safe({
+            "senSlope": result["sen_slope"] * 10,
+            "ciLow": (result.get("ci_adj_low") if result.get("ci_adj_low") is not None else result.get("ci_low", float("nan"))) * 10,
+            "ciHigh": (result.get("ci_adj_high") if result.get("ci_adj_high") is not None else result.get("ci_high", float("nan"))) * 10,
+            "units": variable["trend_units"],
+        })
     if variable["caution"]:
         output["caution"] = variable["caution"]
     if variable["counters"]:
@@ -191,11 +202,27 @@ def compare_presets(
 ) -> dict[str, Any]:
     first = analyze_preset(variable_id, region_a, season, window_id)
     second = analyze_preset(variable_id, region_b, season, window_id)
-    return {
+    out: dict[str, Any] = {
         "evidenceId": f"comparison:{variable_id}:{region_a}:{region_b}:{season}:{window_id}",
         "a": first,
         "b": second,
     }
+    # persistence-adjusted test of whether the two trends differ (same engine
+    # as the browser's A <-> B card); overlap between regions is flagged
+    try:
+        window = _find(catalog()["windows"], "id", window_id)
+        ya, va = window_series(_series(variable_id, season, region_a), window)
+        yb, vb = window_series(_series(variable_id, season, region_b), window)
+        d = slope_difference(ya, va, yb, vb, min_years=first["minYears"])
+        if d.get("label") != "insufficient-data":
+            out["difference"] = _json_safe({
+                "label": d["label"], "diffPerDecade": d["diff"] * 10,
+                "ciLowPerDecade": d["ci_low"] * 10, "ciHighPerDecade": d["ci_high"] * 10,
+                "p": d["p"], "nShared": d["n"], "units": first["variable"]["units"],
+            })
+    except (ValueError, KeyError, TypeError):
+        pass
+    return out
 
 
 def _direction(label: str | None) -> int | None:
@@ -294,7 +321,7 @@ def source_records() -> list[dict[str, str]]:
         {
             "id": "source:readme",
             "title": "Tellus project documentation",
-            "url": "https://power.larc.nasa.gov/",
+            "url": "https://github.com/Mrigank005/Tellus#readme",
             "text": "Tellus analyses NASA POWER MERRA-2 data and uses GPCP V2.3 as an observed precipitation cross-check.",
         },
         {
@@ -312,7 +339,7 @@ def source_records() -> list[dict[str, str]]:
         {
             "id": "source:methods",
             "title": "Tellus statistical methods",
-            "url": "https://psl.noaa.gov/data/gridded/data.gpcp.html",
+            "url": "https://github.com/Mrigank005/Tellus#readme",
             "text": json.dumps(provenance["methods"], ensure_ascii=False),
         },
     ]
@@ -336,6 +363,17 @@ def build_context(selection: dict[str, str | None] | None, question: str) -> dic
         "sources": source_records(),
         "evidence": [],
     }
+    # answer the QUESTION: places / variables it names override the selection
+    resolution = resolve(question, selection)
+    context["resolved"] = resolution
+    selection = resolution["selection"]
+    if resolution["compare"]:
+        try:
+            context["evidence"].append(compare_presets(
+                selection["variableId"], selection["regionId"], resolution["compareWith"],
+                selection["season"], selection["windowId"]))
+        except ValueError:
+            pass
     if selection and all(selection.get(key) for key in ("variableId", "regionId", "season", "windowId")):
         try:
             analysis = analyze_preset(
