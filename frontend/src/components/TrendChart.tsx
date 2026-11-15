@@ -22,7 +22,8 @@ export interface TrendChartProps {
 
 /**
  * Regional time series with the Sen fit and its confidence band.
- * Colour mapping: observed = ink line with paper-filled dots; Sen trend = ember when it rises,
+ * Colour mapping: observed = ink line with paper-filled dots; Sen trend = ember when a detected trend rises,
+ * soft ink when the trend is not detected,
  * tide when it falls; confidence band = copper wash; emergence = leaf; change point = dashed copper;
  * a second region = leaf.
  */
@@ -72,7 +73,10 @@ export default function TrendChart(props: TrendChartProps) {
       bandHigh.push(...line(s.ciAdjHigh))
     }
     const rising = !!s && Number.isFinite(s.senSlope) && s.senSlope >= 0
-    const trendColor = rising ? t.ember : t.tide
+    // colour the fit by direction only when the trend is detected; otherwise keep it quiet
+    const detected = !!s && (s.label === 'detected-increase' || s.label === 'detected-decrease')
+    const trendColor = !detected ? t.inkSoft : rising ? t.ember : t.tide
+    const trendName = !detected ? 'Sen trend (not a clear trend)' : rising ? 'Sen trend (increase)' : 'Sen trend (decrease)'
 
     const series: object[] = [
       {
@@ -110,7 +114,7 @@ export default function TrendChart(props: TrendChartProps) {
     }
     if (fit.length === 2) {
       series.push({
-        name: rising ? 'Sen trend (increase)' : 'Sen trend (decrease)',
+        name: trendName,
         type: 'line', silent: true, symbol: 'none',
         data: [[years[0], fit[0]], [years[years.length - 1], fit[1] as number]],
         lineStyle: { width: 2.5, color: trendColor, type: 'dashed' },
@@ -168,10 +172,11 @@ export default function TrendChart(props: TrendChartProps) {
   const sen = analysis.summary as Summarized
   const hasFit = !!sen && Number.isFinite(sen.senSlope)
   const rising = hasFit && sen.senSlope >= 0
+  const detectedFit = hasFit && (sen.label === 'detected-increase' || sen.label === 'detected-decrease')
   const items: LegendItem[] = [
     { label, color: 'var(--ink)', line: 'solid', dot: 'circle' },
     ...(hasFit ? [
-      { label: rising ? 'Sen trend (increase)' : 'Sen trend (decrease)', color: rising ? 'var(--ember)' : 'var(--tide)', line: 'dashed' as const },
+      { label: !detectedFit ? 'Sen trend (not a clear trend)' : rising ? 'Sen trend (increase)' : 'Sen trend (decrease)', color: !detectedFit ? 'var(--ink-soft)' : rising ? 'var(--ember)' : 'var(--tide)', line: 'dashed' as const },
       { label: 'Confidence band', color: 'var(--copper)', band: true },
     ] : []),
     ...(emergence ? [{ label: 'Time of emergence', color: 'var(--leaf)', line: 'solid' as const }] : []),

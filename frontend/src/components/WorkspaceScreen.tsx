@@ -135,7 +135,11 @@ export default function WorkspaceScreen() {
     setBusy(true)
     loadTrendPack(store.variableId, store.season, store.windowId, cat.n_cells)
       .then((p) => { if (!cancelled) setPack(p) })
-      .catch((e) => { console.error(e); if (!cancelled) setPack(null) })
+      .catch((e) => {
+        // records without a global map (satellite and station series) have no trend pack by design
+        if (!/no trend pack/.test(String((e as Error)?.message))) console.error(e)
+        if (!cancelled) setPack(null)
+      })
       .finally(() => { if (!cancelled) setBusy(false) })
     return () => { cancelled = true }
   }, [cat, store.variableId, store.season, store.windowId])
@@ -342,7 +346,7 @@ export default function WorkspaceScreen() {
             display={lowerFirst(variable.short_name)}>
             {allVars.map((v) => (
               <option key={v.id} value={v.id} title={v.long_name}>
-                {v.short_name}{isMissionOpt(v) ? ' (satellite)' : ''}
+                {v.short_name}{isMissionOpt(v) && !/satellite/i.test(v.short_name) ? ' (satellite)' : ''}
               </option>
             ))}
           </ChipSelect>
