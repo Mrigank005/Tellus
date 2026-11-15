@@ -48,7 +48,7 @@ export interface LiveSeason extends LiveMonthly {
 
 const cache = new Map<string, LiveMonthly>()
 
-function tileRequests(bbox: BBox, param: string): string[] {
+export function tileRequests(bbox: BBox, param: string): string[] {
   const latMin = Math.max(-90, bbox.latMin)
   const latMax = Math.min(90, bbox.latMax)
   const lonMin = Math.max(-180, bbox.lonMin)
@@ -61,11 +61,18 @@ function tileRequests(bbox: BBox, param: string): string[] {
   }
   const [la0, la1] = expand(latMin, latMax, -90, 90)
   const [lo0, lo1] = expand(lonMin, lonMax, -180, 180)
+  // POWER accepts at most 10 degrees and at least 2 degrees per request axis.
+  // Split each axis into equal tiles of <= 9.9 degrees: exactly-10 tiles were
+  // rejected (HTTP 422) after rounding, and a fixed 10-degree step could leave
+  // a final sliver narrower than 2 degrees.
+  const splits = (lo: number, hi: number): [number, number][] => {
+    const n = Math.max(1, Math.ceil((hi - lo) / 9.9))
+    const step = (hi - lo) / n
+    return Array.from({ length: n }, (_, i) => [lo + i * step, i === n - 1 ? hi : lo + (i + 1) * step])
+  }
   const urls: string[] = []
-  for (let lat = la0; lat < la1 - 1e-9; lat += 10) {
-    for (let lon = lo0; lon < lo1 - 1e-9; lon += 10) {
-      const lam = Math.min(lat + 10, la1)
-      const lom = Math.min(lon + 10, lo1)
+  for (const [lat, lam] of splits(la0, la1)) {
+    for (const [lon, lom] of splits(lo0, lo1)) {
       urls.push(
         `${POWER_BASE}?latitude-min=${round6(lat)}&latitude-max=${round6(lam)}` +
         `&longitude-min=${round6(lon)}&longitude-max=${round6(lom)}` +
