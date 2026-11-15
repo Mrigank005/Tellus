@@ -16,7 +16,7 @@
 > **Why "Tellus"?** *Tellus* is Latin for "Earth". The Romans had a goddess of the same name, and she was apparently a great listener. Our planet has been talking for 4.5 billion years, mostly in noisy data, and nobody was taking notes. So we built an app that does, then asks the data to prove it wasn't just having a bad year.
 
 **Live app: https://tellus-web.onrender.com** · free to use, no login
-<!-- DEMO LINK: add the 30-second video or 7-slide deck link here after recording -->
+**Project demo (7 slides):** [PDF](presentation/Tellus-SpaceApps2026.pdf) · [PowerPoint](presentation/Tellus-SpaceApps2026.pptx)
 
 Tellus is our entry for the NASA Space Apps Challenge 2026, **"Be An Earth System Trend Detective!"**. The challenge asks for *"a tool that can select variables measured by Earth science missions or produced by Earth science models, visualize how they change over time, and determine what is changing, where it is changing, how much it is changing, and if these changes are what scientists call significant."* Tellus does all five, for anyone, in plain language, and then shows its working.
 
